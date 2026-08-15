@@ -27,6 +27,8 @@ export type StoredSession = {
   allowed_movements?: Movement[];
   /** Set once we have offered to remember something, so we ask only once. */
   memory_offered?: boolean;
+  /** Facts about the last run, shown under "How Santé did that". */
+  receipt?: unknown;
   plan: DailyPlan;
   last_checkin: ReadinessCheckin | null;
   result: AdaptationResult | null;

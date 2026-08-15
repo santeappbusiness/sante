@@ -329,3 +329,89 @@ function finishWithFallback(result: ReadinessResult, plan: DailyPlan): RunOutcom
 function capitalise(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+/* ------------------------------------------------------------------ *
+ * Natural language into constraints.
+ * ------------------------------------------------------------------ */
+
+const INTERPRET_PROMPT = `You turn what someone says about today into constraints for a wellness session.
+
+Rules:
+- Only extract what they actually said. Do not infer, and do not add anything they did not ask for.
+- Constraints may only make a session gentler or shorter. You cannot lengthen or intensify anything.
+- Available tags to avoid: jumping, floor_work, standing, strength, seated, breathing, quiet.
+- If they mention noise, being quiet, neighbours, or a sleeping baby, avoid jumping and strength.
+- If they mention the floor, a mat, or getting down, avoid floor_work.
+- If they give a number of minutes, use it.
+- If they mention nothing relevant, return empty arrays and no minutes.
+- Never interpret symptoms as a medical condition. "Cramps" means discomfort, nothing more.
+- summary: one short sentence, second person, repeating back only what they asked for.`;
+
+export type InterpretedRequest = {
+  minutes: number | null;
+  avoid_tags: string[];
+  fewer_movements: boolean;
+  low_intensity: boolean;
+  summary: string;
+};
+
+const VALID_TAGS = ["jumping", "floor_work", "standing", "strength", "seated", "breathing", "quiet"];
+
+/**
+ * Reads a sentence like "I only have 8 minutes and need this quiet" and returns
+ * constraint edits. The model does the language; our code decides what those
+ * edits are allowed to do, and they can only ever tighten.
+ */
+export async function interpretRequest(text: string): Promise<InterpretedRequest | null> {
+  if (!process.env.OPENAI_API_KEY || !text.trim()) return null;
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  try {
+    const response = await client.responses.create({
+      model: LUNA_MODEL,
+      input: [
+        { role: "system", content: INTERPRET_PROMPT },
+        { role: "user", content: text.slice(0, 400) },
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "interpreted_request",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              minutes: { type: ["integer", "null"] },
+              avoid_tags: { type: "array", items: { type: "string" } },
+              fewer_movements: { type: "boolean" },
+              low_intensity: { type: "boolean" },
+              summary: { type: "string" },
+            },
+            required: ["minutes", "avoid_tags", "fewer_movements", "low_intensity", "summary"],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+
+    const raw = JSON.parse(response.output_text || "{}");
+
+    /* Sanitise before anything downstream trusts it. A tag we do not know is
+       dropped rather than passed along, and minutes are clamped to a sane
+       range so a stray number cannot produce a two-hour session. */
+    return {
+      minutes:
+        typeof raw.minutes === "number" && raw.minutes >= 3 && raw.minutes <= 60
+          ? Math.round(raw.minutes)
+          : null,
+      avoid_tags: Array.isArray(raw.avoid_tags)
+        ? raw.avoid_tags.filter((t: unknown) => typeof t === "string" && VALID_TAGS.includes(t))
+        : [],
+      fewer_movements: Boolean(raw.fewer_movements),
+      low_intensity: Boolean(raw.low_intensity),
+      summary: typeof raw.summary === "string" ? raw.summary.slice(0, 160) : "",
+    };
+  } catch {
+    return null;
+  }
+}

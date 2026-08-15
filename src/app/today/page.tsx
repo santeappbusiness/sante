@@ -9,7 +9,7 @@ import type {
   Movement,
   ReadinessCheckin,
 } from "@/types/domain";
-import { MAYA, TODAYS_PLAN } from "@/lib/demo-data";
+import { MAYA, MOVEMENTS, TODAYS_PLAN } from "@/lib/demo-data";
 import { getStore, type StoredSession } from "@/lib/storage";
 import { getSupabase } from "@/lib/supabase/client";
 import ReadinessRitual from "@/components/ReadinessRitual";
@@ -20,8 +20,15 @@ import SessionPlayer from "@/components/SessionPlayer";
 import MakeItFit from "@/components/MakeItFit";
 import MemoryProposal from "@/components/MemoryProposal";
 import AppNav from "@/components/AppNav";
+import AdaptationReceipt, { type Receipt } from "@/components/AdaptationReceipt";
 
 type Stage = "plan" | "working" | "result" | "blocked" | "session" | "done" | "rest";
+
+/* Gentlest first: what "just start me" reaches for, and the pool it can swap
+   within if even that is too much. */
+const MOVEMENTS_BY_EASE = [...MOVEMENTS]
+  .filter((m) => m.intensity === "low")
+  .sort((a, b) => a.minutes - b.minutes);
 
 export default function Today() {
   const store = useRef(getStore()).current;
@@ -88,7 +95,12 @@ export default function Today() {
   );
 
   const adapt = useCallback(
-    async (checkin: ReadinessCheckin, tighter = false, fit: string[] = []) => {
+    async (
+      checkin: ReadinessCheckin,
+      tighter = false,
+      fit: string[] = [],
+      request?: string
+    ) => {
       if (!session) return;
       setStage("working");
       setEvents([]);
@@ -121,6 +133,7 @@ export default function Today() {
             session_id: session.session_id,
             recent_feedback: session.feedback,
             fit,
+            request,
           }),
         });
 
@@ -153,6 +166,7 @@ export default function Today() {
               await goTo("result", {
                 result,
                 allowed_movements: (data as any).allowed_movements ?? [],
+                receipt: (data as any).receipt ?? null,
               });
             }
             if (type === "error") {
@@ -241,6 +255,31 @@ export default function Today() {
             </p>
           )}
 
+          {/* For the days when answering four questions is itself too much.
+              One movement, no decisions, and the door stays open afterwards. */}
+          <button
+            onClick={() => {
+              const first = MOVEMENTS_BY_EASE[0];
+              goTo("session", {
+                plan: {
+                  id: "just-start",
+                  title: "Just this one",
+                  total_minutes: first.minutes,
+                  intensity: first.intensity,
+                  movements: [first],
+                },
+                allowed_movements: MOVEMENTS_BY_EASE,
+                completed_movement_ids: [],
+              });
+            }}
+            className="rounded-2xl bg-lavender/35 px-5 py-4 text-left"
+          >
+            <span className="block font-bold">Just start me</span>
+            <span className="mt-0.5 block text-sm text-ink-soft">
+              One movement, a few minutes, no decisions. You can stop after it.
+            </span>
+          </button>
+
           <ReadinessRitual onSubmit={(c) => adapt(c)} busy={streaming} quiet={nd} />
         </section>
       )}
@@ -295,20 +334,16 @@ export default function Today() {
             usedFallback={result.used_fallback}
           />
 
-          {!nd && events.length > 0 && (
-            <details className="mt-4 rounded-xl bg-surface p-4 ring-1 ring-ink/10">
-              <summary className="cursor-pointer text-sm font-bold">
-                What the assistant did
-              </summary>
-              <div className="mt-3">
-                <AgentEvents events={events} done />
-              </div>
-            </details>
+          {Boolean(session.receipt) && (
+            <AdaptationReceipt receipt={session.receipt as Receipt} />
           )}
 
           <MakeItFit
             busy={streaming}
-            onApply={(chips) => session.last_checkin && adapt(session.last_checkin, false, chips)}
+            quiet={nd}
+            onApply={(chips, request) =>
+              session.last_checkin && adapt(session.last_checkin, false, chips, request)
+            }
           />
 
           <div className="mt-5 flex flex-wrap gap-3">

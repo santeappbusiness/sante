@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { readinessCheckinSchema, type AgentEvent } from "@/types/domain";
 import { allowedMovements, computeReadiness } from "@/lib/readiness";
-import { runAdaptation } from "@/lib/luna";
+import { interpretRequest, LUNA_MODEL, runAdaptation } from "@/lib/luna";
 import { MAYA, TODAYS_PLAN } from "@/lib/demo-data";
 import { loadProfile, resolveUser, saveAdaptation, saveCheckin } from "@/lib/persist";
 
@@ -97,6 +97,9 @@ export async function POST(req: NextRequest) {
      reach the model as instructions. */
   const fit: string[] = Array.isArray(body?.fit) ? body.fit : [];
 
+  /* Free text, if they typed instead of tapping. */
+  const request: string = typeof body?.request === "string" ? body.request : "";
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -135,7 +138,39 @@ export async function POST(req: NextRequest) {
           : MAYA;
 
         /* Deterministic gate and constraints, before the model is reachable. */
-        const result = applyFit(computeReadiness(checkin, profile, plan), fit, profile);
+        let result = applyFit(computeReadiness(checkin, profile, plan), fit, profile);
+
+        /* If they wrote a sentence, Luna turns it into constraint edits and our
+           code decides what those edits are allowed to do. They can only ever
+           tighten: nothing typed here can lengthen a session or raise its
+           intensity. */
+        let interpreted: Awaited<ReturnType<typeof interpretRequest>> = null;
+        if (request && !result.blocked) {
+          interpreted = await interpretRequest(request);
+          if (interpreted) {
+            emit({
+              step: "tool_call",
+              label: "Read what you asked for",
+              detail: interpreted.summary || undefined,
+            });
+            const tags = [...result.excluded_tags];
+            for (const t of interpreted.avoid_tags) if (!tags.includes(t)) tags.push(t);
+            result = {
+              ...result,
+              excluded_tags: tags,
+              target_minutes: interpreted.minutes
+                ? Math.min(result.target_minutes, interpreted.minutes)
+                : result.target_minutes,
+              max_movements: interpreted.fewer_movements
+                ? Math.max(1, result.max_movements - 1)
+                : result.max_movements,
+              max_intensity: interpreted.low_intensity ? "low" : result.max_intensity,
+              drivers: interpreted.summary
+                ? [...result.drivers, interpreted.summary.replace(/^You /, "you ")]
+                : result.drivers,
+            };
+          }
+        }
         emit({
           step: "authenticated",
           label: "Opened your plan for today",
@@ -158,11 +193,14 @@ export async function POST(req: NextRequest) {
           return;
         }
 
+        const recentFeedback = Array.isArray(body?.recent_feedback) ? body.recent_feedback : [];
+        const recentFeedbackCount = recentFeedback.length;
+
         const outcome = await runAdaptation({
           profile,
           plan,
           result,
-          recentFeedback: Array.isArray(body?.recent_feedback) ? body.recent_feedback : [],
+          recentFeedback,
           emit,
           signal: req.signal,
         });
@@ -200,6 +238,29 @@ export async function POST(req: NextRequest) {
              mid-session swap is a local, instant choice from a list the server
              already vetted, rather than a second trip through the model. */
           allowed_movements: allowedMovements(result),
+          /* The adaptation receipt. Everything here is a fact about the run:
+             what we knew, what was consulted, what changed. No reasoning. */
+          receipt: {
+            inputs: [
+              "Today's readiness check-in",
+              `${profile.avoid_tags.length} saved movement preference${profile.avoid_tags.length === 1 ? "" : "s"}`,
+              recentFeedbackCount > 0
+                ? `${recentFeedbackCount} recent feedback item${recentFeedbackCount === 1 ? "" : "s"}`
+                : "No feedback history yet",
+              interpreted ? "What you typed" : fit.length ? "Quick adjustments you tapped" : null,
+            ].filter(Boolean),
+            tools: [
+              "Readiness constraints (our code)",
+              "Movement retrieval (filtered to what is allowed)",
+              "Plan validation (checked against the constraints)",
+            ],
+            outcome: {
+              minutes: [plan.total_minutes, outcome.adapted.total_minutes],
+              movements: [plan.movements.length, outcome.adapted.movements.length],
+              intensity: [plan.intensity, outcome.adapted.intensity],
+              source: outcome.used_fallback ? "Santé's own rules" : LUNA_MODEL,
+            },
+          },
           readiness: {
             score: result.score,
             target_minutes: result.target_minutes,

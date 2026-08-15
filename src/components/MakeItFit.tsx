@@ -22,11 +22,14 @@ const CHIPS: Array<{ id: string; label: string }> = [
 export default function MakeItFit({
   onApply,
   busy,
+  quiet = false,
 }: {
-  onApply: (chips: string[]) => void;
+  onApply: (chips: string[], request?: string) => void;
   busy: boolean;
+  quiet?: boolean;
 }) {
   const [picked, setPicked] = useState<string[]>([]);
+  const [text, setText] = useState("");
 
   return (
     <div className="mt-5 rounded-2xl bg-canvas p-4 ring-1 ring-ink/10">
@@ -56,12 +59,31 @@ export default function MakeItFit({
         })}
       </div>
 
-      {picked.length > 0 && (
+      {/* Or say it. The sentence becomes constraints our code applies, and
+          those can only ever make today gentler. Hidden in simplified mode,
+          where a blank box is one decision too many. */}
+      {!quiet && (
+        <div className="mt-4">
+          <label htmlFor="fit-text" className="text-xs text-slate">
+            Or tell Santé what today looks like
+          </label>
+          <textarea
+            id="fit-text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={2}
+            placeholder="I only have 8 minutes and I need this quiet"
+            className="mt-1 w-full rounded-xl bg-surface px-4 py-3 text-sm ring-1 ring-ink/15 placeholder:text-slate/70"
+          />
+        </div>
+      )}
+
+      {(picked.length > 0 || text.trim()) && (
         <button
           type="button"
           disabled={busy}
-          onClick={() => onApply(picked)}
-          className="mt-4 w-full rounded-xl bg-surface px-5 py-3 font-bold ring-1 ring-ink/20 disabled:opacity-60"
+          onClick={() => onApply(picked, text.trim() || undefined)}
+          className="mt-3 w-full rounded-xl bg-surface px-5 py-3 font-bold ring-1 ring-ink/20 disabled:opacity-60"
         >
           {busy ? "Adjusting" : "Adjust today's plan"}
         </button>

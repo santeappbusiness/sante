@@ -26,7 +26,7 @@ export default function Landing() {
 
       <div className="mt-10 flex flex-wrap items-center gap-3">
         <Link
-          href="/today"
+          href="/home"
           className="rounded-xl bg-coral px-6 py-3.5 font-bold text-coral-on transition-[filter] hover:brightness-105"
         >
           Try the demo

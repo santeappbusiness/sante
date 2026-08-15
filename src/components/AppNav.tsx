@@ -4,12 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /**
- * Three destinations, bottom-anchored on mobile where thumbs are, inline on
- * desktop. Not five tabs: Santé does one thing well and the navigation should
- * say so.
+ * Bottom-anchored on mobile where thumbs are, a pill on desktop.
+ *
+ * Today sits in the middle because it is the thing people come back for, and
+ * it is the only tab that changes what the product does rather than what it
+ * shows.
  */
 
 const TABS = [
+  { href: "/home", label: "Home" },
+  { href: "/explore", label: "Explore" },
   { href: "/today", label: "Today" },
   { href: "/progress", label: "Progress" },
   { href: "/profile", label: "Profile" },
@@ -26,14 +30,14 @@ export default function AppNav() {
     >
       <ul className="mx-auto flex max-w-3xl">
         {TABS.map((tab) => {
-          const active = pathname === tab.href;
+          const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
           return (
             <li key={tab.href} className="flex-1">
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={
-                  "block py-3.5 text-center text-sm sm:py-2.5 " +
+                  "block py-3.5 text-center text-xs sm:text-sm sm:py-2.5 " +
                   (active ? "font-bold text-ink" : "text-slate")
                 }
               >

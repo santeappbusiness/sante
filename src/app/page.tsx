@@ -7,7 +7,13 @@ export default function Landing() {
         Capacity-first wellness
       </p>
 
-      <h1 className="mt-4 text-5xl leading-[1.05] sm:text-6xl">Santé</h1>
+      {/* The actual logo, not a typed wordmark. Its canvas matches ours, so it
+          sits on the page rather than in a box. */}
+      <img
+        src="/brand/sante-logo.png"
+        alt="Santé"
+        className="-ml-6 mt-1 w-56 sm:w-64"
+      />
 
       <p className="mt-5 max-w-md text-xl leading-relaxed text-ink-soft">
         Your body changed today. Your plan should too.

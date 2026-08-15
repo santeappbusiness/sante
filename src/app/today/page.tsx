@@ -15,7 +15,7 @@ import ReadinessCheck from "@/components/ReadinessCheck";
 import PlanDiff from "@/components/PlanDiff";
 import AgentEvents from "@/components/AgentEvents";
 
-type Stage = "plan" | "working" | "result" | "blocked" | "session" | "done";
+type Stage = "plan" | "working" | "result" | "blocked" | "session" | "done" | "rest";
 
 export default function Today() {
   const store = useRef(getStore()).current;
@@ -155,6 +155,7 @@ export default function Today() {
     <main className="mx-auto max-w-3xl px-5 py-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
+          <img src="/brand/sante-logo.png" alt="Santé" className="-ml-3 -mt-2 h-16 w-auto" />
           <h1 className="text-3xl">Good morning, {MAYA.display_name}</h1>
           <p className="text-sm text-ink-soft">{MAYA.goal}</p>
         </div>
@@ -240,6 +241,7 @@ export default function Today() {
 
       {stage === "result" && result && (
         <section className="mt-8">
+          <h2 className="mb-4 text-3xl">Your plan flexed.</h2>
           <PlanDiff
             original={result.original}
             adapted={result.adapted}
@@ -276,6 +278,12 @@ export default function Today() {
               onClick={() => goTo("session", { plan: result.original, completed_movement_ids: [] })}
             >
               Keep the original
+            </button>
+            <button
+              className="rounded-xl px-5 py-3 text-ink-soft underline"
+              onClick={() => goTo("rest")}
+            >
+              Rest today
             </button>
           </div>
         </section>
@@ -332,10 +340,28 @@ export default function Today() {
         </section>
       )}
 
+      {stage === "rest" && (
+        <section className="mt-8 rounded-2xl bg-moss/20 p-6">
+          <h2 className="text-2xl">Rest is still a choice.</h2>
+          <p className="mt-2 max-w-md text-ink-soft">
+            You checked in, saw what today looked like, and chose rest. That counts as
+            honoring your capacity, and nothing here will guilt you about it.
+          </p>
+          <button
+            className="mt-5 rounded-xl bg-surface px-5 py-3 font-bold ring-1 ring-ink/15"
+            onClick={() => goTo("plan", { plan: TODAYS_PLAN, completed_movement_ids: [] })}
+          >
+            Back to today
+          </button>
+        </section>
+      )}
+
       {stage === "done" && (
         <section className="mt-8 rounded-2xl bg-surface p-6 ring-1 ring-ink/10">
-          <h2 className="text-2xl">How was that?</h2>
-          <p className="mt-1 text-sm text-ink-soft">
+          <h2 className="text-3xl">You showed up for today.</h2>
+          <p className="mt-1 text-ink-soft">The plan changed. The intention didn&rsquo;t.</p>
+          <p className="mt-4 text-sm font-bold">How was it?</p>
+          <p className="text-sm text-ink-soft">
             We use this next time you check in. Nothing here is a score.
           </p>
           <div className="mt-5 grid gap-2 sm:grid-cols-3">

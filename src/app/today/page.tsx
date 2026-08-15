@@ -21,6 +21,7 @@ import MakeItFit from "@/components/MakeItFit";
 import MemoryProposal from "@/components/MemoryProposal";
 import AppNav from "@/components/AppNav";
 import AdaptationReceipt, { type Receipt } from "@/components/AdaptationReceipt";
+import TodayContext, { contextTags, type TodayContextValue } from "@/components/TodayContext";
 
 type Stage = "plan" | "working" | "result" | "blocked" | "session" | "done" | "rest";
 
@@ -39,6 +40,10 @@ export default function Today() {
   const [streaming, setStreaming] = useState(false);
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const [nd, setNd] = useState(MAYA.neurodivergent_mode);
+  const [context, setContext] = useState<TodayContextValue>({
+    period_today: false,
+    symptoms: [],
+  });
   const [who, setWho] = useState<{ name: string; isDemo: boolean }>({
     name: MAYA.display_name,
     isDemo: true,
@@ -134,6 +139,10 @@ export default function Today() {
             recent_feedback: session.feedback,
             fit,
             request,
+            /* Symptoms become ordinary movement constraints. There is no rule
+               anywhere that turns a period into a gentle day: what they
+               reported on the sliders decides that. */
+            context_tags: contextTags(context),
           }),
         });
 
@@ -279,6 +288,8 @@ export default function Today() {
               One movement, a few minutes, no decisions. You can stop after it.
             </span>
           </button>
+
+          <TodayContext value={context} onChange={setContext} />
 
           <ReadinessRitual onSubmit={(c) => adapt(c)} busy={streaming} quiet={nd} />
         </section>

@@ -30,14 +30,18 @@ export default function AuthCallback() {
 
       /* Give a brand new account a profile and a plan to adapt from, otherwise
          they land on an app with nothing in it. */
+      let firstTime = false;
       try {
-        await fetch("/api/bootstrap", {
+        const res = await fetch("/api/bootstrap", {
           method: "POST",
           headers: { Authorization: `Bearer ${data.session.access_token}` },
         });
+        firstTime = Boolean((await res.json())?.created);
       } catch {}
 
-      window.location.replace("/today");
+      /* A brand new account goes through onboarding once. Everyone else lands
+         where they left off. */
+      window.location.replace(firstTime ? "/onboarding" : "/home");
     })();
   }, []);
 

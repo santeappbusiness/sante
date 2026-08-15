@@ -26,6 +26,13 @@ export async function POST(req: NextRequest) {
     (typeof meta.name === "string" && meta.name.split(" ")[0]) ||
     "there";
 
+  const { data: before } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", profileId)
+    .maybeSingle();
+  const created = !before;
+
   await admin.from("profiles").upsert(
     {
       id: profileId,
@@ -62,5 +69,5 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, created });
 }

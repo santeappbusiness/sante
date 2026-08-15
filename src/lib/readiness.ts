@@ -90,7 +90,14 @@ export function computeReadiness(
     if (!excluded_tags.includes("jumping")) excluded_tags.push("jumping");
   }
 
-  if (drivers.length === 0) drivers.push("you reported feeling steady today");
+  /* Say so when someone reports a good day. Without this the only sentence the
+     model ever sees is a flat "feeling steady", and it plays safe by trimming a
+     session that did not need trimming. A good day is information too. */
+  if (score >= 70) {
+    drivers.push("you reported good energy and little discomfort");
+  } else if (drivers.length === 0) {
+    drivers.push("you reported feeling steady today");
+  }
 
   return {
     score,

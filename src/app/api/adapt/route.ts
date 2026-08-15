@@ -100,6 +100,13 @@ export async function POST(req: NextRequest) {
   /* Free text, if they typed instead of tapping. */
   const request: string = typeof body?.request === "string" ? body.request : "";
 
+  /* Movement tags derived from anything else they told us about today. They
+     arrive as tags, not as symptoms or labels, so nothing downstream can treat
+     them as clinical information. */
+  const contextTags: string[] = Array.isArray(body?.context_tags)
+    ? body.context_tags.filter((t: unknown) => typeof t === "string")
+    : [];
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -139,6 +146,12 @@ export async function POST(req: NextRequest) {
 
         /* Deterministic gate and constraints, before the model is reachable. */
         let result = applyFit(computeReadiness(checkin, profile, plan), fit, profile);
+
+        if (contextTags.length > 0 && !result.blocked) {
+          const tags = [...result.excluded_tags];
+          for (const t of contextTags) if (!tags.includes(t)) tags.push(t);
+          result = { ...result, excluded_tags: tags };
+        }
 
         /* If they wrote a sentence, Luna turns it into constraint edits and our
            code decides what those edits are allowed to do. They can only ever

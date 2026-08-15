@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-canvas text-ink font-body antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-display;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid #f97c50;
+    outline-offset: 2px;
+  }
+}
+
+/* Neurodivergent mode: calmer surfaces, no motion, one thing at a time.
+   Applied by adding data-nd="on" to <html>. */
+[data-nd="on"] * {
+  animation: none !important;
+  transition: none !important;
+}
+[data-nd="on"] .nd-hide {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

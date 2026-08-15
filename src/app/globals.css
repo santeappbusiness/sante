@@ -28,11 +28,39 @@
   }
 }
 
+/* The plan morph. The adapted figures arrive a beat after the original, so the
+   change reads as something that happened rather than a page that loaded.
+   Around 600ms in total, because a transition longer than the work it
+   represents is just a delay wearing a costume. */
+@keyframes sante-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.morph-in {
+  animation: sante-rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.morph-delay-1 { animation-delay: 90ms; }
+.morph-delay-2 { animation-delay: 180ms; }
+.morph-delay-3 { animation-delay: 280ms; }
+
 /* Neurodivergent mode: calmer surfaces, no motion, one thing at a time.
    Applied by adding data-nd="on" to <html>. */
 [data-nd="on"] * {
   animation: none !important;
   transition: none !important;
+}
+
+[data-nd="on"] .morph-in {
+  opacity: 1;
+  transform: none;
 }
 [data-nd="on"] .nd-hide {
   display: none !important;

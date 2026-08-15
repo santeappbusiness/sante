@@ -21,6 +21,7 @@ import MakeItFit from "@/components/MakeItFit";
 import MemoryProposal from "@/components/MemoryProposal";
 import AppNav from "@/components/AppNav";
 import AdaptationReceipt, { type Receipt } from "@/components/AdaptationReceipt";
+import RebalanceProposal from "@/components/RebalanceProposal";
 import TodayContext, { contextTags, type TodayContextValue } from "@/components/TodayContext";
 
 type Stage = "plan" | "working" | "result" | "blocked" | "session" | "done" | "rest";
@@ -440,6 +441,8 @@ export default function Today() {
           <p className="text-sm text-ink-soft">
             We use this next time you check in. Nothing here is a score.
           </p>
+          <RebalanceProposal actualMinutes={plan.total_minutes} />
+
           <MemoryProposal
             feedback={session.feedback}
             alreadyOffered={Boolean(session.memory_offered)}

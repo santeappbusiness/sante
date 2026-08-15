@@ -47,13 +47,18 @@ export async function saveCheckin(
     .select("id")
     .maybeSingle();
 
-  if (error) return null;
+  if (error) {
+    console.error("checkin insert failed:", error.message);
+    return null;
+  }
   return data?.id ?? null;
 }
 
 export async function saveAdaptation(args: {
   profileId: string;
-  checkinId: string | null;
+  /* Required: an adaptation without the check-in that caused it is a record
+     with no explanation, and the table enforces that. */
+  checkinId: string;
   original: DailyPlan;
   adapted: DailyPlan;
   reasons: string[];
@@ -72,8 +77,12 @@ export async function saveAdaptation(args: {
          foreign key would make old diffs re-render against a new baseline. */
       original_plan: args.original,
       adapted_plan: args.adapted,
-      reasons: args.reasons,
-      used_fallback: args.usedFallback,
+      /* The lines shown under "Why this changed". The column is text, so store
+         them as readable prose rather than letting the array stringify itself
+         into JSON: anyone browsing the table should be able to read why a plan
+         changed without parsing anything. Split on newline to get them back. */
+      why_this_changed: args.reasons.join("\n"),
+      source: args.usedFallback ? "fallback" : "llm",
       /* Evidence the model worked inside a box it could not widen. */
       constraints_applied: {
         max_intensity: args.result.max_intensity,
@@ -85,6 +94,11 @@ export async function saveAdaptation(args: {
     .select("id")
     .maybeSingle();
 
-  if (error) return null;
+  if (error) {
+    /* Worth seeing in the server log: a silent failure here means feedback
+       cannot be written either, because it references this row. */
+    console.error("adaptation insert failed:", error.message);
+    return null;
+  }
   return data?.id ?? null;
 }

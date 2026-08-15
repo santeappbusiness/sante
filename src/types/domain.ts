@@ -170,7 +170,7 @@ export type AgentEvent = z.infer<typeof agentEventSchema>;
 
 /** What the client receives once the adaptation is validated and saved. */
 export type AdaptationResult = {
-  adaptation_id: string;
+  adaptation_id: string | null;
   original: DailyPlan;
   adapted: DailyPlan;
   reasons: string[];

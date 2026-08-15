@@ -116,15 +116,19 @@ export async function POST(req: NextRequest) {
         let adaptationId: string | null = null;
         if (profileId) {
           const checkinId = await saveCheckin(profileId, checkin, result);
-          adaptationId = await saveAdaptation({
-            profileId,
-            checkinId,
-            original: plan,
-            adapted: outcome.adapted,
-            reasons: outcome.reasons,
-            usedFallback: outcome.used_fallback,
-            result,
-          });
+          /* No check-in row means no adaptation row: the table requires the
+             link, and an adaptation with no recorded cause is not worth
+             storing anyway. */
+          if (checkinId)
+            adaptationId = await saveAdaptation({
+              profileId,
+              checkinId,
+              original: plan,
+              adapted: outcome.adapted,
+              reasons: outcome.reasons,
+              usedFallback: outcome.used_fallback,
+              result,
+            });
         }
 
         emit({
@@ -133,7 +137,7 @@ export async function POST(req: NextRequest) {
         });
 
         send("result", {
-          adaptation_id: adaptationId ?? crypto.randomUUID(),
+          adaptation_id: adaptationId,
           original: plan,
           adapted: outcome.adapted,
           reasons: outcome.reasons,

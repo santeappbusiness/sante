@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { readinessCheckinSchema, type AgentEvent } from "@/types/domain";
-import { computeReadiness } from "@/lib/readiness";
+import { allowedMovements, computeReadiness } from "@/lib/readiness";
 import { runAdaptation } from "@/lib/luna";
 import { MAYA, TODAYS_PLAN } from "@/lib/demo-data";
 import { resolveUser, saveAdaptation, saveCheckin } from "@/lib/persist";
@@ -36,6 +36,42 @@ function overLimit(key: string) {
   return entry.count > MAX_PER_SESSION;
 }
 
+/**
+ * Chips like "quieter" or "5 minutes shorter" are constraint edits, not prompts.
+ * Applying them here keeps one source of truth for what is allowed today, and
+ * means the model cannot be talked past them.
+ */
+function applyFit(
+  result: ReturnType<typeof computeReadiness>,
+  fit: string[],
+  profile: typeof MAYA
+) {
+  if (fit.length === 0) return result;
+  const next = { ...result, excluded_tags: [...result.excluded_tags], drivers: [...result.drivers] };
+
+  for (const f of fit) {
+    if (f === "shorter") {
+      next.target_minutes = Math.max(5, next.target_minutes - 5);
+      next.drivers.push("you asked for something shorter");
+    }
+    if (f === "quieter") {
+      for (const tag of ["jumping", "strength"])
+        if (!next.excluded_tags.includes(tag)) next.excluded_tags.push(tag);
+      next.max_intensity = "low";
+      next.drivers.push("you asked for something quieter");
+    }
+    if (f === "no_floor") {
+      if (!next.excluded_tags.includes("floor_work")) next.excluded_tags.push("floor_work");
+      next.drivers.push("you asked to stay off the floor");
+    }
+    if (f === "fewer") {
+      next.max_movements = Math.max(1, next.max_movements - 1);
+      next.drivers.push("you asked for fewer movements");
+    }
+  }
+  return next;
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = readinessCheckinSchema.safeParse(body?.checkin);
@@ -57,8 +93,13 @@ export async function POST(req: NextRequest) {
   const profile = MAYA;
   const plan = TODAYS_PLAN;
 
+  /* Quick adjustments the person asked for by tapping a chip. They tighten the
+     constraints our own code computes; they never loosen them, and they never
+     reach the model as instructions. */
+  const fit: string[] = Array.isArray(body?.fit) ? body.fit : [];
+
   /* Deterministic gate and constraints, before the model is reachable at all. */
-  const result = computeReadiness(checkin, profile, plan);
+  const result = applyFit(computeReadiness(checkin, profile, plan), fit, profile);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -142,6 +183,10 @@ export async function POST(req: NextRequest) {
           adapted: outcome.adapted,
           reasons: outcome.reasons,
           used_fallback: outcome.used_fallback,
+          /* Everything the app is allowed to use today. Sending it means a
+             mid-session swap is a local, instant choice from a list the server
+             already vetted, rather than a second trip through the model. */
+          allowed_movements: allowedMovements(result),
           readiness: {
             score: result.score,
             target_minutes: result.target_minutes,

@@ -6,14 +6,20 @@ import type {
   AgentEvent,
   DailyPlan,
   FeedbackVerdict,
+  Movement,
   ReadinessCheckin,
 } from "@/types/domain";
 import { MAYA, TODAYS_PLAN } from "@/lib/demo-data";
 import { getStore, type StoredSession } from "@/lib/storage";
 import { getSupabase } from "@/lib/supabase/client";
-import ReadinessCheck from "@/components/ReadinessCheck";
+import ReadinessRitual from "@/components/ReadinessRitual";
+import CapacityBloom, { toBloom } from "@/components/CapacityBloom";
 import PlanDiff from "@/components/PlanDiff";
 import AgentEvents from "@/components/AgentEvents";
+import SessionPlayer from "@/components/SessionPlayer";
+import MakeItFit from "@/components/MakeItFit";
+import MemoryProposal from "@/components/MemoryProposal";
+import AppNav from "@/components/AppNav";
 
 type Stage = "plan" | "working" | "result" | "blocked" | "session" | "done" | "rest";
 
@@ -59,7 +65,7 @@ export default function Today() {
   );
 
   const adapt = useCallback(
-    async (checkin: ReadinessCheckin, tighter = false) => {
+    async (checkin: ReadinessCheckin, tighter = false, fit: string[] = []) => {
       if (!session) return;
       setStage("working");
       setEvents([]);
@@ -91,6 +97,7 @@ export default function Today() {
             checkin: payload,
             session_id: session.session_id,
             recent_feedback: session.feedback,
+            fit,
           }),
         });
 
@@ -120,7 +127,10 @@ export default function Today() {
             }
             if (type === "result") {
               const result = data as AdaptationResult;
-              await goTo("result", { result });
+              await goTo("result", {
+                result,
+                allowed_movements: (data as any).allowed_movements ?? [],
+              });
             }
             if (type === "error") {
               setEvents((e) => [...e, { step: "error", label: data.message }]);
@@ -152,7 +162,8 @@ export default function Today() {
   const completed = session.completed_movement_ids;
 
   return (
-    <main className="mx-auto max-w-3xl px-5 py-10">
+    <>
+    <main className="mx-auto max-w-3xl px-5 py-10 pb-28 sm:pb-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <img src="/brand/sante-logo.png" alt="Santé" className="-ml-3 -mt-2 h-16 w-auto" />
@@ -207,7 +218,7 @@ export default function Today() {
             </p>
           )}
 
-          <ReadinessCheck onSubmit={(c) => adapt(c)} busy={streaming} />
+          <ReadinessRitual onSubmit={(c) => adapt(c)} busy={streaming} quiet={nd} />
         </section>
       )}
 
@@ -242,6 +253,18 @@ export default function Today() {
       {stage === "result" && result && (
         <section className="mt-8">
           <h2 className="mb-4 text-3xl">Your plan flexed.</h2>
+
+          {session.last_checkin && (
+            <div className="mb-5 flex justify-center rounded-2xl bg-lavender/25 py-6">
+              <CapacityBloom
+                values={toBloom(session.last_checkin)}
+                size={150}
+                showLegend={false}
+                quiet={nd}
+              />
+            </div>
+          )}
+
           <PlanDiff
             original={result.original}
             adapted={result.adapted}
@@ -259,6 +282,11 @@ export default function Today() {
               </div>
             </details>
           )}
+
+          <MakeItFit
+            busy={streaming}
+            onApply={(chips) => session.last_checkin && adapt(session.last_checkin, false, chips)}
+          />
 
           <div className="mt-5 flex flex-wrap gap-3">
             <button
@@ -290,54 +318,33 @@ export default function Today() {
       )}
 
       {stage === "session" && (
-        <section className="mt-8">
-          <h2 className="text-2xl">{plan.title}</h2>
-          <p className="mt-1 text-sm text-ink-soft">
-            {completed.length} of {plan.movements.length} done
-          </p>
-
-          <ul className="mt-4 grid gap-2">
-            {plan.movements.map((m) => {
-              const isDone = completed.includes(m.id);
-              return (
-                <li key={m.id}>
-                  <button
-                    onClick={() =>
-                      patch({
-                        completed_movement_ids: isDone
-                          ? completed.filter((id) => id !== m.id)
-                          : [...completed, m.id],
-                      })
-                    }
-                    aria-pressed={isDone}
-                    className={
-                      "w-full rounded-xl p-4 text-left ring-1 " +
-                      (isDone ? "bg-moss/25 ring-transparent" : "bg-surface ring-ink/10")
-                    }
-                  >
-                    <span className="flex items-baseline justify-between gap-3">
-                      <span className="font-bold">
-                        {isDone && <span aria-hidden="true">✓ </span>}
-                        {m.name}
-                      </span>
-                      <span className="font-mono text-sm text-slate">{m.minutes} min</span>
-                    </span>
-                    {!nd && (
-                      <span className="mt-1 block text-sm text-ink-soft">{m.instructions}</span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-
-          <button
-            className="mt-5 w-full rounded-xl bg-coral px-5 py-3.5 font-bold text-coral-on"
-            onClick={() => goTo("done")}
-          >
-            Finish session
-          </button>
-        </section>
+        <div className="mt-8">
+          <SessionPlayer
+            plan={plan}
+            pool={session.allowed_movements ?? []}
+            completed={completed}
+            quiet={nd}
+            onToggleComplete={(id) =>
+              patch({
+                completed_movement_ids: completed.includes(id)
+                  ? completed.filter((x) => x !== id)
+                  : [...completed, id],
+              })
+            }
+            onSwap={(index, replacement) => {
+              const movements = [...plan.movements];
+              movements[index] = replacement;
+              patch({
+                plan: {
+                  ...plan,
+                  movements,
+                  total_minutes: movements.reduce((sum, m) => sum + m.minutes, 0),
+                },
+              });
+            }}
+            onFinish={() => goTo("done")}
+          />
+        </div>
       )}
 
       {stage === "rest" && (
@@ -364,6 +371,17 @@ export default function Today() {
           <p className="text-sm text-ink-soft">
             We use this next time you check in. Nothing here is a score.
           </p>
+          <MemoryProposal
+            feedback={session.feedback}
+            alreadyOffered={Boolean(session.memory_offered)}
+            adaptedMinutes={result?.adapted.total_minutes ?? 12}
+            onRemember={async (minutes) => {
+              await store.rememberPreferredMinutes?.(minutes);
+              await patch({ memory_offered: true });
+            }}
+            onDismiss={() => patch({ memory_offered: true })}
+          />
+
           <div className="mt-5 grid gap-2 sm:grid-cols-3">
             {(
               [
@@ -402,5 +420,7 @@ export default function Today() {
         diagnose, treat, or give medical advice.
       </footer>
     </main>
+    <AppNav />
+    </>
   );
 }

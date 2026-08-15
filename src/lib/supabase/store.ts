@@ -1,6 +1,6 @@
 import type { DailyPlan, FeedbackVerdict, Movement } from "@/types/domain";
 import { movementById, TODAYS_PLAN } from "@/lib/demo-data";
-import type { Store, StoredSession } from "@/lib/storage";
+import type { HistoryEntry, Store, StoredSession } from "@/lib/storage";
 import { ensureAnonymousSession, getSupabase, newAnonymousSession } from "./client";
 
 /**
@@ -23,17 +23,24 @@ import { ensureAnonymousSession, getSupabase, newAnonymousSession } from "./clie
 
 const LOCAL = "sante-ui-state";
 
-type LocalState = Pick<
-  StoredSession,
-  "stage" | "completed_movement_ids" | "result" | "last_checkin"
->;
+/* Everything about the session except what Postgres owns. Partial, because a
+   fresh visitor has none of it yet. */
+type LocalState = Partial<StoredSession> & {
+  stage: string;
+  completed_movement_ids: string[];
+};
 
 function readLocal(): LocalState {
   try {
     const raw = sessionStorage.getItem(LOCAL);
     if (raw) return JSON.parse(raw) as LocalState;
   } catch {}
-  return { stage: "plan", completed_movement_ids: [], result: null, last_checkin: null };
+  return {
+    stage: "plan",
+    completed_movement_ids: [],
+    result: null,
+    last_checkin: null,
+  } as LocalState;
 }
 
 function writeLocal(state: LocalState) {
@@ -61,6 +68,18 @@ function toDailyPlan(row: any): DailyPlan {
 
 export class SupabaseStore implements Store {
   private profileId: string | null = null;
+
+  /* Pages like Progress and Profile construct their own store and never call
+     createSession, so identity has to be resolvable on demand rather than only
+     as a side effect of starting a session. */
+  private async uid(): Promise<string | null> {
+    if (this.profileId) return this.profileId;
+    const sb = getSupabase();
+    if (!sb) return null;
+    const { data } = await sb.auth.getSession();
+    this.profileId = data.session?.user?.id ?? null;
+    return this.profileId;
+  }
 
   async createSession(seedPlan: DailyPlan): Promise<StoredSession> {
     const sb = getSupabase();
@@ -91,12 +110,10 @@ export class SupabaseStore implements Store {
 
   async save(patch: Partial<StoredSession>): Promise<void> {
     const local = readLocal();
-    writeLocal({
-      stage: patch.stage ?? local.stage,
-      completed_movement_ids: patch.completed_movement_ids ?? local.completed_movement_ids,
-      result: patch.result ?? local.result,
-      last_checkin: patch.last_checkin ?? local.last_checkin,
-    });
+    /* Merge rather than pick field by field: every new piece of session state
+       was silently dropped here, and a swap pool that vanishes takes the
+       mid-session swap with it. */
+    writeLocal({ ...local, ...patch } as LocalState);
 
   }
 
@@ -109,13 +126,43 @@ export class SupabaseStore implements Store {
     completed: string[]
   ): Promise<void> {
     const sb = getSupabase();
-    if (!sb || !this.profileId) return;
+    const id = await this.uid();
+    if (!sb || !id) return;
     await sb.from("feedback").insert({
-      profile_id: this.profileId,
+      profile_id: id,
       adaptation_id: adaptationId,
       verdict,
       completed_movements: completed,
     });
+  }
+
+  /* Written only when the person taps Remember. The column is in Serene's
+     column-level UPDATE grant, so this is the client's to write. */
+  async rememberPreferredMinutes(minutes: number): Promise<void> {
+    const sb = getSupabase();
+    const id = await this.uid();
+    if (!sb || !id) return;
+    await sb.from("profiles").update({ preferred_minutes: minutes }).eq("id", id);
+  }
+
+  async history(): Promise<HistoryEntry[]> {
+    const sb = getSupabase();
+    const id = await this.uid();
+    if (!sb || !id) return [];
+    const { data } = await sb
+      .from("adaptations")
+      .select("id, created_at, original_plan, adapted_plan, source, why_this_changed")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      created_at: row.created_at,
+      original_minutes: Number(row.original_plan?.total_minutes ?? 0),
+      adapted_minutes: Number(row.adapted_plan?.total_minutes ?? 0),
+      source: row.source ?? "llm",
+      why: String(row.why_this_changed ?? "").split("\n").filter(Boolean),
+    }));
   }
 
   async reset(seedPlan: DailyPlan): Promise<StoredSession> {
@@ -142,13 +189,15 @@ export class SupabaseStore implements Store {
     ]);
 
     return {
+      ...local,
       session_id: this.profileId,
-      plan: planRow ? toDailyPlan(planRow) : fallbackPlan,
-      last_checkin: local.last_checkin,
-      result: local.result,
+      /* An in-progress session keeps the plan it started, including any swap. */
+      plan: local.plan ?? (planRow ? toDailyPlan(planRow) : fallbackPlan),
+      last_checkin: local.last_checkin ?? null,
+      result: local.result ?? null,
+      stage: local.stage,
       completed_movement_ids: local.completed_movement_ids,
       feedback: (feedbackRows ?? []).map((r: any) => r.verdict as FeedbackVerdict),
-      stage: local.stage,
     };
   }
 
@@ -157,13 +206,12 @@ export class SupabaseStore implements Store {
   private offline(seedPlan: DailyPlan): StoredSession {
     const local = readLocal();
     return {
+      ...local,
       session_id: "offline",
-      plan: seedPlan,
-      last_checkin: local.last_checkin,
-      result: local.result,
-      completed_movement_ids: local.completed_movement_ids,
+      plan: local.plan ?? seedPlan,
+      last_checkin: local.last_checkin ?? null,
+      result: local.result ?? null,
       feedback: [],
-      stage: local.stage,
     };
   }
 }

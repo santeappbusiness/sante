@@ -4,6 +4,7 @@ import type {
   AdaptationResult,
   DailyPlan,
   FeedbackVerdict,
+  Movement,
   ReadinessCheckin,
 } from "@/types/domain";
 
@@ -22,6 +23,10 @@ import type {
 
 export type StoredSession = {
   session_id: string;
+  /** Movements the server permitted today. Used for mid-session swaps. */
+  allowed_movements?: Movement[];
+  /** Set once we have offered to remember something, so we ask only once. */
+  memory_offered?: boolean;
   plan: DailyPlan;
   last_checkin: ReadinessCheckin | null;
   result: AdaptationResult | null;
@@ -30,9 +35,22 @@ export type StoredSession = {
   stage: string;
 };
 
+export type HistoryEntry = {
+  id: string;
+  created_at: string;
+  original_minutes: number;
+  adapted_minutes: number;
+  source: string;
+  why: string[];
+};
+
 export interface Store {
   /** Records a verdict against the adaptation it belongs to. */
   saveFeedback?(adaptationId: string, verdict: FeedbackVerdict, completed: string[]): Promise<void>;
+  /** Saves a preference the person explicitly agreed to remember. */
+  rememberPreferredMinutes?(minutes: number): Promise<void>;
+  /** Everything this visitor has done, for Progress. */
+  history?(): Promise<HistoryEntry[]>;
   /** Starts a fresh demo session. One per visitor, so two judges never share Maya. */
   createSession(seedPlan: DailyPlan): Promise<StoredSession>;
   load(): Promise<StoredSession | null>;

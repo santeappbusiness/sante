@@ -3,6 +3,18 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bloom-petal: #cec3d6;
+    --bloom-center: #5f7d52;
+  }
+
+  /* Simplified mode pulls the saturation down rather than changing the shape,
+     so the same flower is recognisable in both modes. */
+  [data-nd="on"] {
+    --bloom-petal: #d8d2dd;
+    --bloom-center: #6e7d83;
+  }
+
   body {
     @apply bg-canvas text-ink font-body antialiased;
   }

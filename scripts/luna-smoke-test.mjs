@@ -141,9 +141,13 @@ try {
   if (calls.length > 0) {
     toolCallSeen = { name: calls[0].name, args: calls[0].arguments };
 
+    /* Luna is a reasoning model. Its function_call items are paired with
+       reasoning items, and sending the calls back without them is rejected:
+       "function_call was provided without its required reasoning item".
+       So echo the entire output array, in order, then append the results. */
     const followUp = [
       ...input,
-      ...calls,
+      ...response.output,
       ...calls.map((c) => ({
         type: "function_call_output",
         call_id: c.call_id,
@@ -174,6 +178,10 @@ try {
   } else if (err?.status === 404) {
     console.error("\n  That model id is not available to this account. Try LUNA_MODEL with");
     console.error("  one of the ids listed above.\n");
+  } else if (/reasoning/i.test(msg)) {
+    console.error("\n  Reasoning-model rule: when you send function_call results back you");
+    console.error("  must echo the whole output array, reasoning items included, not just");
+    console.error("  the function_call items.\n");
   } else {
     console.error("\n  Check the model id, the credit balance, and whether this model");
     console.error("  supports the Responses API on this account.\n");

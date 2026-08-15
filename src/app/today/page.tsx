@@ -10,6 +10,7 @@ import type {
 } from "@/types/domain";
 import { MAYA, TODAYS_PLAN } from "@/lib/demo-data";
 import { getStore, type StoredSession } from "@/lib/storage";
+import { getSupabase } from "@/lib/supabase/client";
 import ReadinessCheck from "@/components/ReadinessCheck";
 import PlanDiff from "@/components/PlanDiff";
 import AgentEvents from "@/components/AgentEvents";
@@ -77,9 +78,15 @@ export default function Today() {
         : checkin;
 
       try {
+        const sb = getSupabase();
+        const token = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+
         const res = await fetch("/api/adapt", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             checkin: payload,
             session_id: session.session_id,
@@ -341,13 +348,20 @@ export default function Today() {
             ).map(([value, label]) => (
               <button
                 key={value}
-                onClick={() =>
-                  goTo("plan", {
+                onClick={async () => {
+                  if (session.result?.adaptation_id) {
+                    await store.saveFeedback?.(
+                      session.result.adaptation_id,
+                      value,
+                      session.completed_movement_ids
+                    );
+                  }
+                  await goTo("plan", {
                     feedback: [value, ...session.feedback],
                     plan: TODAYS_PLAN,
                     completed_movement_ids: [],
-                  })
-                }
+                  });
+                }}
                 className="rounded-xl bg-canvas px-4 py-3 font-bold ring-1 ring-ink/10"
               >
                 {label}

@@ -3,6 +3,7 @@ import { readinessCheckinSchema, type AgentEvent } from "@/types/domain";
 import { computeReadiness } from "@/lib/readiness";
 import { runAdaptation } from "@/lib/luna";
 import { MAYA, TODAYS_PLAN } from "@/lib/demo-data";
+import { resolveUser, saveAdaptation, saveCheckin } from "@/lib/persist";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -79,7 +80,13 @@ export async function POST(req: NextRequest) {
       const emit = (event: AgentEvent) => send("agent", event);
 
       try {
-        emit({ step: "authenticated", label: "Opened your plan for today" });
+        /* Identity from the caller's token, never from the request body. */
+        const profileId = await resolveUser(req.headers.get("authorization"));
+        emit({
+          step: "authenticated",
+          label: "Opened your plan for today",
+          detail: profileId ? undefined : "this session only",
+        });
         emit({
           step: "safety_checked",
           label: "Ran the safety check",
@@ -89,6 +96,9 @@ export async function POST(req: NextRequest) {
         /* The red-flag path stops here. No plan is generated, and no model call
            is made, so there is nothing for a model to override. */
         if (result.blocked) {
+          /* The verdict is recorded even though no plan is produced, so a
+             paused day is still part of the person's history. */
+          if (profileId) await saveCheckin(profileId, checkin, result);
           send("blocked", { reason: result.block_reason });
           send("done", { ok: true });
           return;
@@ -103,10 +113,27 @@ export async function POST(req: NextRequest) {
           signal: req.signal,
         });
 
-        emit({ step: "saved", label: "Saved today's adaptation" });
+        let adaptationId: string | null = null;
+        if (profileId) {
+          const checkinId = await saveCheckin(profileId, checkin, result);
+          adaptationId = await saveAdaptation({
+            profileId,
+            checkinId,
+            original: plan,
+            adapted: outcome.adapted,
+            reasons: outcome.reasons,
+            usedFallback: outcome.used_fallback,
+            result,
+          });
+        }
+
+        emit({
+          step: "saved",
+          label: adaptationId ? "Saved today's adaptation" : "Ready",
+        });
 
         send("result", {
-          adaptation_id: crypto.randomUUID(),
+          adaptation_id: adaptationId ?? crypto.randomUUID(),
           original: plan,
           adapted: outcome.adapted,
           reasons: outcome.reasons,

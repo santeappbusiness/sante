@@ -1,3 +1,5 @@
+import { supabaseConfigured } from "./supabase/client";
+import { SupabaseStore } from "./supabase/store";
 import type {
   AdaptationResult,
   DailyPlan,
@@ -29,6 +31,8 @@ export type StoredSession = {
 };
 
 export interface Store {
+  /** Records a verdict against the adaptation it belongs to. */
+  saveFeedback?(adaptationId: string, verdict: FeedbackVerdict, completed: string[]): Promise<void>;
   /** Starts a fresh demo session. One per visitor, so two judges never share Maya. */
   createSession(seedPlan: DailyPlan): Promise<StoredSession>;
   load(): Promise<StoredSession | null>;
@@ -92,18 +96,19 @@ class BrowserStore implements Store {
   }
 }
 
-/* When the schema is confirmed, add:
- *
- *   class SupabaseStore implements Store { ... }
- *
- * createSession inserts a row in demo_sessions and copies Maya's profile and
- * plan against that id. Writes go through our own API routes with the
- * service-role key, so the browser never holds a key that can write. Then
- * getStore() returns it, and nothing else in the app changes. */
-
 let instance: Store | null = null;
 
+/**
+ * The one place that decides where data lives.
+ *
+ * With Supabase configured, identity is an anonymous user and RLS keyed on
+ * auth.uid() does the isolation. Without it, the app falls back to the browser
+ * and still runs end to end, which is what lets the demo survive a database
+ * outage rather than dying with one.
+ */
 export function getStore(): Store {
-  if (!instance) instance = new BrowserStore();
+  if (!instance) {
+    instance = supabaseConfigured ? new SupabaseStore() : new BrowserStore();
+  }
   return instance;
 }

@@ -53,7 +53,14 @@ if (candidates.length === 0) {
   candidates.forEach((m) => console.log("   ", m));
 }
 
-const model = wanted || candidates[0] || models[0];
+/* Prefer Luna, then any gpt-5.x, then whatever is first. Alphabetical order put
+   plain "gpt-5" ahead of "gpt-5.6-luna", which is not what we want to test. */
+const preferred =
+  candidates.find((m) => /luna/i.test(m)) ||
+  candidates.sort().reverse().find((m) => /^gpt-5\.\d+$/.test(m)) ||
+  candidates[0];
+
+const model = wanted || preferred || models[0];
 line();
 console.log(`  Testing with: ${model}`);
 if (!wanted && candidates.length > 1) {
@@ -156,11 +163,21 @@ try {
   parsed = JSON.parse(text);
 } catch (err) {
   line();
-  console.error("\n  The call failed:", err?.message || err);
-  console.error("\n  Common causes:");
-  console.error("   - wrong model id for this account, try LUNA_MODEL with one listed above");
-  console.error("   - the account has no credits");
-  console.error("   - this model does not support the Responses API on this account\n");
+  const msg = err?.message || String(err);
+  console.error("\n  The call failed:", msg);
+  if (err?.status === 429 || /quota/i.test(msg)) {
+    console.error("\n  This is a billing state, not a code problem. The key authenticated");
+    console.error("  fine; the account simply has no credit balance.");
+    console.error("\n  Fix: platform.openai.com -> Settings -> Billing -> add a payment");
+    console.error("  method and buy credits. While you are there, set a hard spend limit");
+    console.error("  under Settings -> Limits.\n");
+  } else if (err?.status === 404) {
+    console.error("\n  That model id is not available to this account. Try LUNA_MODEL with");
+    console.error("  one of the ids listed above.\n");
+  } else {
+    console.error("\n  Check the model id, the credit balance, and whether this model");
+    console.error("  supports the Responses API on this account.\n");
+  }
   process.exit(1);
 }
 

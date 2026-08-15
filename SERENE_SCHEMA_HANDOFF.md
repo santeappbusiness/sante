@@ -3,7 +3,7 @@
 Your five tables look right. This is what I need back so the app code matches your columns
 exactly instead of guessing, plus one table that is missing.
 
-Fastest path: **paste the answers to sections 1 and 2 into the Discord channel**, and run the
+Fastest path: **paste the answers to sections 1 and 2 in chat**, and run the
 SQL in section 3. Fifteen minutes total.
 
 ---

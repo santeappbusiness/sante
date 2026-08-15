@@ -1,75 +1,73 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
+  AdaptationResult,
   AgentEvent,
   DailyPlan,
   FeedbackVerdict,
   ReadinessCheckin,
 } from "@/types/domain";
 import { MAYA, TODAYS_PLAN } from "@/lib/demo-data";
+import { getStore, type StoredSession } from "@/lib/storage";
 import ReadinessCheck from "@/components/ReadinessCheck";
 import PlanDiff from "@/components/PlanDiff";
+import AgentEvents from "@/components/AgentEvents";
 
 type Stage = "plan" | "working" | "result" | "blocked" | "session" | "done";
 
-type Result = {
-  adaptation_id: string;
-  original: DailyPlan;
-  adapted: DailyPlan;
-  reasons: string[];
-  used_fallback: boolean;
-};
-
-/* Session storage stands in for the database until Serene's schema lands.
-   Same shape, one seam to swap. */
-const KEY = "sante-demo-state";
-
 export default function Today() {
+  const store = useRef(getStore()).current;
+
+  const [session, setSession] = useState<StoredSession | null>(null);
   const [stage, setStage] = useState<Stage>("plan");
   const [events, setEvents] = useState<AgentEvent[]>([]);
-  const [result, setResult] = useState<Result | null>(null);
+  const [streaming, setStreaming] = useState(false);
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
-  const [plan, setPlan] = useState<DailyPlan>(TODAYS_PLAN);
-  const [completed, setCompleted] = useState<string[]>([]);
-  const [feedback, setFeedback] = useState<FeedbackVerdict[]>([]);
-  const [lastCheckin, setLastCheckin] = useState<ReadinessCheckin | null>(null);
   const [nd, setNd] = useState(MAYA.neurodivergent_mode);
 
-  /* Restore, so a refresh in front of a judge does not lose the session. */
+  /* One ephemeral session per visitor. Two judges opening the link at the same
+     time each get their own Maya. */
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (saved.result) setResult(saved.result);
-      if (saved.stage) setStage(saved.stage);
-      if (saved.feedback) setFeedback(saved.feedback);
-      if (saved.completed) setCompleted(saved.completed);
-      if (saved.plan) setPlan(saved.plan);
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(KEY, JSON.stringify({ stage, result, feedback, completed, plan }));
-    } catch {}
-  }, [stage, result, feedback, completed, plan]);
+    (async () => {
+      const existing = await store.load();
+      const s = existing ?? (await store.createSession(TODAYS_PLAN));
+      setSession(s);
+      setStage((s.stage as Stage) || "plan");
+    })();
+  }, [store]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-nd", nd ? "on" : "off");
   }, [nd]);
 
+  const patch = useCallback(
+    async (p: Partial<StoredSession>) => {
+      setSession((prev) => (prev ? { ...prev, ...p } : prev));
+      await store.save(p);
+    },
+    [store]
+  );
+
+  const goTo = useCallback(
+    async (next: Stage, extra: Partial<StoredSession> = {}) => {
+      setStage(next);
+      await patch({ stage: next, ...extra });
+    },
+    [patch]
+  );
+
   const adapt = useCallback(
     async (checkin: ReadinessCheckin, tighter = false) => {
+      if (!session) return;
       setStage("working");
       setEvents([]);
+      setStreaming(true);
       setBlockedReason(null);
-      setLastCheckin(checkin);
+      await patch({ last_checkin: checkin, stage: "working" });
 
-      /* "Go lighter" re-runs the same check-in with the dials turned down,
-         which is a smaller change than it looks and a better demo beat than a
-         plan editor would have been. */
+      /* "Still too much" re-runs the same check-in with the dials turned down.
+         Smaller than a plan editor, and a better demo beat. */
       const payload = tighter
         ? {
             ...checkin,
@@ -78,76 +76,105 @@ export default function Today() {
           }
         : checkin;
 
-      const res = await fetch("/api/adapt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          checkin: payload,
-          session_id: "demo",
-          recent_feedback: feedback,
-        }),
-      });
+      try {
+        const res = await fetch("/api/adapt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            checkin: payload,
+            session_id: session.session_id,
+            recent_feedback: session.feedback,
+          }),
+        });
 
-      if (!res.ok || !res.body) {
-        setEvents((e) => [...e, { step: "error", label: "Could not reach the planner" }]);
-        return;
-      }
+        if (!res.ok || !res.body) throw new Error("no stream");
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const chunks = buffer.split("\n\n");
+          buffer = chunks.pop() || "";
 
-        const chunks = buffer.split("\n\n");
-        buffer = chunks.pop() || "";
+          for (const chunk of chunks) {
+            const type = chunk.match(/^event: (.+)$/m)?.[1];
+            const dataLine = chunk.match(/^data: (.+)$/m)?.[1];
+            if (!type || !dataLine) continue;
+            const data = JSON.parse(dataLine);
 
-        for (const chunk of chunks) {
-          const type = chunk.match(/^event: (.+)$/m)?.[1];
-          const dataLine = chunk.match(/^data: (.+)$/m)?.[1];
-          if (!type || !dataLine) continue;
-          const data = JSON.parse(dataLine);
-
-          if (type === "agent") setEvents((e) => [...e, data as AgentEvent]);
-          if (type === "blocked") {
-            setBlockedReason(data.reason);
-            setStage("blocked");
-          }
-          if (type === "result") {
-            setResult(data as Result);
-            setStage("result");
-          }
-          if (type === "error") {
-            setEvents((e) => [...e, { step: "error", label: data.message }]);
+            if (type === "agent") setEvents((e) => [...e, data as AgentEvent]);
+            if (type === "blocked") {
+              setBlockedReason(data.reason);
+              await goTo("blocked");
+            }
+            if (type === "result") {
+              const result = data as AdaptationResult;
+              await goTo("result", { result });
+            }
+            if (type === "error") {
+              setEvents((e) => [...e, { step: "error", label: data.message }]);
+            }
           }
         }
+      } catch {
+        setEvents((e) => [
+          ...e,
+          { step: "error", label: "Could not reach the planner. Try again in a moment." },
+        ]);
+      } finally {
+        setStreaming(false);
       }
     },
-    [feedback]
+    [session, patch, goTo]
   );
+
+  if (!session) {
+    return (
+      <main className="mx-auto max-w-3xl px-5 py-10">
+        <p className="text-ink-soft">Opening today&rsquo;s plan…</p>
+      </main>
+    );
+  }
+
+  const plan = session.plan;
+  const result = session.result;
+  const completed = session.completed_movement_ids;
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-10">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl">Good morning, {MAYA.display_name}</h1>
           <p className="text-sm text-ink-soft">{MAYA.goal}</p>
         </div>
-        <label className="flex items-center gap-2 text-sm text-ink-soft">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-moss-deep"
-            checked={nd}
-            onChange={(e) => setNd(e.target.checked)}
-          />
-          Simplified mode
-        </label>
+        <div className="flex flex-col items-end gap-2">
+          <label className="flex items-center gap-2 text-sm text-ink-soft">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-moss-deep"
+              checked={nd}
+              onChange={(e) => setNd(e.target.checked)}
+            />
+            Simplified mode
+          </label>
+          <button
+            className="text-xs text-slate underline"
+            onClick={async () => {
+              const fresh = await store.reset(TODAYS_PLAN);
+              setSession(fresh);
+              setStage("plan");
+              setEvents([]);
+            }}
+          >
+            Reset demo
+          </button>
+        </div>
       </header>
 
-      {/* Today's plan, before anything has changed */}
       {stage === "plan" && (
         <section className="mt-8 grid gap-5">
           <div className="rounded-2xl bg-surface p-5 ring-1 ring-ink/10">
@@ -163,48 +190,47 @@ export default function Today() {
               ))}
             </ul>
           </div>
-          <ReadinessCheck onSubmit={(c) => adapt(c)} busy={false} />
+
+          {session.feedback.length > 0 && (
+            <p className="rounded-xl bg-lavender/40 px-4 py-3 text-sm">
+              Last time you said the session was{" "}
+              <strong>{session.feedback[0].replace(/_/g, " ")}</strong>. We will take that into
+              account.
+            </p>
+          )}
+
+          <ReadinessCheck onSubmit={(c) => adapt(c)} busy={streaming} />
         </section>
       )}
 
-      {/* The agent, working. Real events from the real loop. */}
       {stage === "working" && (
         <section className="mt-8 rounded-2xl bg-surface p-6 ring-1 ring-ink/10">
           <h2 className="text-xl">Adapting your plan</h2>
-          <ol className="mt-4 space-y-2">
-            {events.map((e, i) => (
-              <li key={i} className="flex gap-3 text-sm">
-                <span aria-hidden="true" className="text-moss-deep">
-                  ✓
-                </span>
-                <span>
-                  {e.label}
-                  {e.detail && <span className="text-slate"> · {e.detail}</span>}
-                </span>
-              </li>
-            ))}
-            <li className="flex gap-3 text-sm text-slate">
-              <span aria-hidden="true">·</span> working
-            </li>
-          </ol>
+          <p className="mt-1 text-sm text-slate">
+            These are the steps actually being taken, as they happen.
+          </p>
+          <div className="mt-4">
+            <AgentEvents events={events} done={!streaming} />
+          </div>
         </section>
       )}
 
-      {/* Red-flag path. No plan, no model, no negotiation. */}
       {stage === "blocked" && (
         <section className="mt-8 rounded-2xl bg-terracotta/10 p-6">
           <h2 className="text-xl">Let&rsquo;s pause today</h2>
           <p className="mt-2 text-ink-soft">{blockedReason}</p>
+          <p className="mt-3 text-sm text-slate">
+            Santé is a wellness tool and cannot advise on symptoms.
+          </p>
           <button
             className="mt-5 rounded-xl bg-surface px-5 py-3 font-bold ring-1 ring-ink/15"
-            onClick={() => setStage("plan")}
+            onClick={() => goTo("plan")}
           >
-            Back
+            Back to today
           </button>
         </section>
       )}
 
-      {/* The hero moment */}
       {stage === "result" && result && (
         <section className="mt-8">
           <PlanDiff
@@ -214,28 +240,33 @@ export default function Today() {
             usedFallback={result.used_fallback}
           />
 
+          {!nd && events.length > 0 && (
+            <details className="mt-4 rounded-xl bg-surface p-4 ring-1 ring-ink/10">
+              <summary className="cursor-pointer text-sm font-bold">
+                What the assistant did
+              </summary>
+              <div className="mt-3">
+                <AgentEvents events={events} done />
+              </div>
+            </details>
+          )}
+
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               className="rounded-xl bg-coral px-5 py-3 font-bold text-coral-on"
-              onClick={() => {
-                setPlan(result.adapted);
-                setStage("session");
-              }}
+              onClick={() => goTo("session", { plan: result.adapted, completed_movement_ids: [] })}
             >
               Start adapted plan
             </button>
             <button
               className="rounded-xl bg-surface px-5 py-3 font-bold ring-1 ring-ink/15"
-              onClick={() => lastCheckin && adapt(lastCheckin, true)}
+              onClick={() => session.last_checkin && adapt(session.last_checkin, true)}
             >
               Still too much
             </button>
             <button
               className="rounded-xl px-5 py-3 text-ink-soft underline"
-              onClick={() => {
-                setPlan(result.original);
-                setStage("session");
-              }}
+              onClick={() => goTo("session", { plan: result.original, completed_movement_ids: [] })}
             >
               Keep the original
             </button>
@@ -243,13 +274,13 @@ export default function Today() {
         </section>
       )}
 
-      {/* Tap to complete. No timers, on purpose. */}
       {stage === "session" && (
         <section className="mt-8">
           <h2 className="text-2xl">{plan.title}</h2>
           <p className="mt-1 text-sm text-ink-soft">
             {completed.length} of {plan.movements.length} done
           </p>
+
           <ul className="mt-4 grid gap-2">
             {plan.movements.map((m) => {
               const isDone = completed.includes(m.id);
@@ -257,20 +288,28 @@ export default function Today() {
                 <li key={m.id}>
                   <button
                     onClick={() =>
-                      setCompleted(
-                        isDone ? completed.filter((id) => id !== m.id) : [...completed, m.id]
-                      )
+                      patch({
+                        completed_movement_ids: isDone
+                          ? completed.filter((id) => id !== m.id)
+                          : [...completed, m.id],
+                      })
                     }
+                    aria-pressed={isDone}
                     className={
                       "w-full rounded-xl p-4 text-left ring-1 " +
                       (isDone ? "bg-moss/25 ring-transparent" : "bg-surface ring-ink/10")
                     }
                   >
                     <span className="flex items-baseline justify-between gap-3">
-                      <span className="font-bold">{m.name}</span>
+                      <span className="font-bold">
+                        {isDone && <span aria-hidden="true">✓ </span>}
+                        {m.name}
+                      </span>
                       <span className="font-mono text-sm text-slate">{m.minutes} min</span>
                     </span>
-                    {!nd && <span className="mt-1 block text-sm text-ink-soft">{m.instructions}</span>}
+                    {!nd && (
+                      <span className="mt-1 block text-sm text-ink-soft">{m.instructions}</span>
+                    )}
                   </button>
                 </li>
               );
@@ -279,14 +318,13 @@ export default function Today() {
 
           <button
             className="mt-5 w-full rounded-xl bg-coral px-5 py-3.5 font-bold text-coral-on"
-            onClick={() => setStage("done")}
+            onClick={() => goTo("done")}
           >
             Finish session
           </button>
         </section>
       )}
 
-      {/* One tap of feedback, which feeds the next adaptation. */}
       {stage === "done" && (
         <section className="mt-8 rounded-2xl bg-surface p-6 ring-1 ring-ink/10">
           <h2 className="text-2xl">How was that?</h2>
@@ -303,25 +341,26 @@ export default function Today() {
             ).map(([value, label]) => (
               <button
                 key={value}
-                onClick={() => {
-                  setFeedback([value, ...feedback]);
-                  setStage("plan");
-                  setCompleted([]);
-                  setPlan(TODAYS_PLAN);
-                }}
+                onClick={() =>
+                  goTo("plan", {
+                    feedback: [value, ...session.feedback],
+                    plan: TODAYS_PLAN,
+                    completed_movement_ids: [],
+                  })
+                }
                 className="rounded-xl bg-canvas px-4 py-3 font-bold ring-1 ring-ink/10"
               >
                 {label}
               </button>
             ))}
           </div>
-          {feedback.length > 0 && (
-            <p className="mt-4 text-sm text-slate">
-              Remembered so far: {feedback.join(", ")}
-            </p>
-          )}
         </section>
       )}
+
+      <footer className="mt-14 text-xs leading-relaxed text-slate">
+        Maya is a fictional demo user. Santé is a wellness tool, not a medical one, and does not
+        diagnose, treat, or give medical advice.
+      </footer>
     </main>
   );
 }

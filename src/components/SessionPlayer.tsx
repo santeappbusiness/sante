@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { DailyPlan, Movement } from "@/types/domain";
+import { Blob, Sprig } from "./BrandShapes";
 
 /**
  * The session, one movement at a time.
@@ -104,7 +105,7 @@ export default function SessionPlayer({
           <span
             key={m.id}
             className={
-              "h-1.5 flex-1 rounded-full " +
+              "h-2 flex-1 rounded-full transition-colors " +
               (completed.includes(m.id)
                 ? "bg-moss-deep"
                 : i === index
@@ -115,15 +116,29 @@ export default function SessionPlayer({
         ))}
       </div>
 
-      <div className="mt-6 rounded-2xl bg-surface p-6 ring-1 ring-ink/10 sm:p-8">
-        <h2 className="text-3xl">{movement.name}</h2>
-        <p className="mt-1 font-mono text-sm text-slate">
-          {movement.minutes} min · {movement.intensity}
+      <div className="relative mt-6 overflow-hidden rounded-[28px] bg-surface p-7 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_24px_60px_-34px_rgba(47,58,51,0.4)] sm:p-10">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 text-moss/15">
+          <Blob size={260} />
+        </div>
+
+        <div className="relative flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-display text-4xl leading-tight sm:text-5xl">{movement.name}</h2>
+            <p className="mt-2 font-mono text-sm text-slate">
+              {movement.minutes} min · {movement.intensity}
+            </p>
+          </div>
+          <span aria-hidden="true" className="shrink-0 text-moss">
+            <Sprig size={38} />
+          </span>
+        </div>
+
+        <p className="relative mt-6 max-w-lg text-xl leading-relaxed text-ink-soft">
+          {movement.instructions}
         </p>
-        <p className="mt-4 text-lg leading-relaxed text-ink-soft">{movement.instructions}</p>
 
         {lastSwap && (
-          <p className="mt-5 rounded-xl bg-moss/20 px-4 py-3 text-sm" role="status">
+          <p className="relative mt-6 rounded-2xl bg-moss/25 px-5 py-4 text-sm" role="status">
             {lastSwap}
           </p>
         )}
@@ -132,8 +147,8 @@ export default function SessionPlayer({
           onClick={() => onToggleComplete(movement.id)}
           aria-pressed={isDone}
           className={
-            "mt-6 w-full rounded-xl px-5 py-4 font-bold " +
-            (isDone ? "bg-moss/30 text-ink" : "bg-coral text-coral-on")
+            "relative mt-7 w-full rounded-2xl px-5 py-5 text-lg font-bold " +
+            (isDone ? "bg-moss/35 text-ink" : "bg-coral text-coral-on")
           }
         >
           {isDone ? "✓ Done" : "Mark done"}
@@ -143,7 +158,7 @@ export default function SessionPlayer({
             framed as giving up. */}
         <button
           onClick={handleSwap}
-          className="mt-3 w-full rounded-xl px-5 py-3 text-sm text-ink-soft underline"
+          className="relative mt-3 w-full rounded-2xl px-5 py-3.5 text-sm text-ink-soft underline decoration-slate/40 underline-offset-4"
         >
           This isn&rsquo;t working today
         </button>

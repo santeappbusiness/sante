@@ -210,12 +210,14 @@ export default function Today() {
 
   return (
     <>
-    <main className="mx-auto max-w-3xl px-5 py-10 pb-28 sm:pb-10">
+    <main className="mx-auto max-w-3xl px-5 py-8 pb-28 sm:pb-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <img src="/brand/sante-logo.png" alt="Santé" className="-ml-3 -mt-2 h-16 w-auto" />
-          <h1 className="text-3xl">Good morning, {who.name}</h1>
-          <p className="text-sm text-ink-soft">{MAYA.goal}</p>
+          <img src="/brand/sante-logo.png" alt="Santé" className="-ml-2 w-24 sm:w-28" />
+          <h1 className="mt-1 font-display text-4xl leading-tight">Today</h1>
+          <p className="mt-1 text-sm text-ink-soft">
+            {who.name}, this is what you planned and what today can be.
+          </p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <label className="flex items-center gap-2 text-sm text-ink-soft">
@@ -243,12 +245,15 @@ export default function Today() {
 
       {stage === "plan" && (
         <section className="mt-8 grid gap-5">
-          <div className="rounded-2xl bg-surface p-5 ring-1 ring-ink/10">
+          <div className="rounded-[24px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_18px_44px_-30px_rgba(47,58,51,0.3)]">
             <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
-              Today&rsquo;s intended plan
+              What you planned
             </p>
-            <p className="mt-2 font-display text-3xl tabular-nums">
-              {plan.total_minutes} min · {plan.intensity} · {plan.movements.length} movements
+            <p className="mt-2 font-display text-3xl leading-tight tabular-nums sm:text-4xl">
+              {plan.total_minutes} min · {plan.intensity}
+            </p>
+            <p className="font-display text-xl text-ink-soft sm:text-2xl">
+              {plan.movements.length} movement{plan.movements.length === 1 ? "" : "s"}
             </p>
             <ul className="mt-3 space-y-1 text-sm text-ink-soft">
               {plan.movements.map((m) => (

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ReadinessCheckin, RedFlag } from "@/types/domain";
 import CapacityBloom, { toBloom } from "./CapacityBloom";
+import { Blob } from "./BrandShapes";
 
 /**
  * The check-in, as a short ritual rather than a form.
@@ -81,25 +82,28 @@ export default function ReadinessRitual({
   }
 
   return (
-    <section className="rounded-2xl bg-surface p-6 ring-1 ring-ink/10 sm:p-8">
+    <section className="relative overflow-hidden rounded-[28px] bg-surface p-7 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-32px_rgba(47,58,51,0.35)] sm:p-10">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 text-lavender/40">
+        <Blob size={280} />
+      </div>
       {/* Progress: dots, not a percentage. */}
-      <div className="mb-6 flex items-center gap-1.5" aria-hidden="true">
+      <div className="relative mb-7 flex items-center gap-1.5" aria-hidden="true">
         {Array.from({ length: total }).map((_, i) => (
           <span
             key={i}
             className={
-              "h-1.5 flex-1 rounded-full " + (i <= step ? "bg-moss-deep" : "bg-ink/10")
+              "h-2 flex-1 rounded-full " + (i <= step ? "bg-moss-deep" : "bg-ink/10")
             }
           />
         ))}
       </div>
 
       {step < STEPS.length && (
-        <div>
+        <div className="relative">
           <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
             Step {step + 1} of {total}
           </p>
-          <h2 className="mt-2 text-2xl sm:text-3xl">{current.question}</h2>
+          <h2 className="mt-3 font-display text-3xl leading-tight sm:text-4xl">{current.question}</h2>
           {!quiet && <p className="mt-2 text-sm text-ink-soft">{current.helper}</p>}
 
           <div className="mt-7 grid grid-cols-5 gap-2" role="group" aria-label={current.question}>
@@ -112,10 +116,10 @@ export default function ReadinessRitual({
                   onClick={() => answer(n)}
                   aria-pressed={selected}
                   className={
-                    "rounded-xl py-5 font-display text-2xl tabular-nums ring-1 " +
+                    "rounded-2xl py-6 font-display text-3xl tabular-nums transition-all ring-1 " +
                     (selected
-                      ? "bg-moss/30 ring-transparent"
-                      : "bg-canvas ring-ink/10 hover:ring-ink/25")
+                      ? "bg-moss/35 ring-transparent"
+                      : "bg-canvas ring-ink/10 hover:-translate-y-0.5 hover:ring-ink/30")
                   }
                 >
                   {n}
@@ -142,11 +146,11 @@ export default function ReadinessRitual({
       )}
 
       {step === STEPS.length && (
-        <div>
+        <div className="relative">
           <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
             Step {total - 1} of {total}
           </p>
-          <h2 className="mt-2 text-2xl sm:text-3xl">Anything today that needs care?</h2>
+          <h2 className="mt-3 font-display text-3xl leading-tight sm:text-4xl">Anything today that needs care?</h2>
           <p className="mt-2 text-sm text-ink-soft">
             If you tick any of these, Santé will not suggest a session today.
           </p>
@@ -198,14 +202,14 @@ export default function ReadinessRitual({
       )}
 
       {step === total - 1 && (
-        <div className="text-center">
+        <div className="relative text-center">
           <CapacityBloom values={toBloom({ ...values, red_flags: flags })} quiet={quiet} />
 
           <button
             type="button"
             disabled={busy}
             onClick={() => onSubmit({ ...values, red_flags: flags })}
-            className="mt-7 w-full rounded-xl bg-coral px-6 py-3.5 font-bold text-coral-on disabled:opacity-60"
+            className="mt-8 w-full rounded-2xl bg-coral px-6 py-4 text-lg font-bold text-coral-on disabled:opacity-60"
           >
             {busy ? "Working on it" : "Adapt today's plan"}
           </button>

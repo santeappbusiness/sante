@@ -7,7 +7,7 @@
  */
 
 /** The peanut blob. Large ambient fills behind editorial sections. */
-export function Blob({ className = "", size = 300 }: { className?: string; size?: number }) {
+export function Blob({ className = "", id: _id, size = 300 }: { className?: string; id?: string; size?: number }) {
   return (
     <svg
       width={size}
@@ -26,7 +26,7 @@ export function Blob({ className = "", size = 300 }: { className?: string; size?
 }
 
 /** The arch. Used where something is in progress or building. */
-export function Arch({ className = "", size = 120 }: { className?: string; size?: number }) {
+export function Arch({ className = "", id: _id, size = 120 }: { className?: string; id?: string; size?: number }) {
   return (
     <svg width={size} height={size * 0.6} viewBox="0 0 100 60" fill="none" aria-hidden="true" className={className}>
       <path d="M6 60V36a44 44 0 0 1 88 0v24" stroke="currentColor" strokeWidth="10" strokeLinecap="round" />
@@ -34,23 +34,42 @@ export function Arch({ className = "", size = 120 }: { className?: string; size?
   );
 }
 
-/** The four-petal flower. The product's quiet signature. */
-export function Flower({ className = "", size = 64 }: { className?: string; size?: number }) {
+/**
+ * The four-petal flower. The product's quiet signature.
+ *
+ * The centre is punched out rather than painted, so the shape works on any
+ * tinted ground. Filling it with a fixed colour left a pale dot floating on
+ * every surface that was not the canvas.
+ */
+export function Flower({
+  className = "",
+  size = 64,
+  id = "petal",
+}: {
+  className?: string;
+  size?: number;
+  id?: string;
+}) {
+  const maskId = `flower-${id}-${size}`;
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true" className={className}>
-      <g fill="currentColor">
-        <ellipse cx="32" cy="16" rx="11" ry="15" />
-        <ellipse cx="32" cy="48" rx="11" ry="15" />
-        <ellipse cx="16" cy="32" rx="15" ry="11" />
-        <ellipse cx="48" cy="32" rx="15" ry="11" />
-      </g>
-      <circle cx="32" cy="32" r="7" fill="var(--canvas-solid, #F7F6F2)" />
+      <mask id={maskId}>
+        <rect width="64" height="64" fill="black" />
+        <g fill="white">
+          <ellipse cx="32" cy="16" rx="11" ry="15" />
+          <ellipse cx="32" cy="48" rx="11" ry="15" />
+          <ellipse cx="16" cy="32" rx="15" ry="11" />
+          <ellipse cx="48" cy="32" rx="15" ry="11" />
+        </g>
+        <circle cx="32" cy="32" r="7" fill="black" />
+      </mask>
+      <rect width="64" height="64" fill="currentColor" mask={`url(#${maskId})`} />
     </svg>
   );
 }
 
 /** The coral asterisk. Energy, action, the moment something changes. */
-export function Asterisk({ className = "", size = 40 }: { className?: string; size?: number }) {
+export function Asterisk({ className = "", id: _id, size = 40 }: { className?: string; id?: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true" className={className}>
       <g stroke="currentColor" strokeWidth="6" strokeLinecap="round">
@@ -61,7 +80,7 @@ export function Asterisk({ className = "", size = 40 }: { className?: string; si
 }
 
 /** Soft waves. Rhythm, repetition, the week. */
-export function Waves({ className = "", size = 140 }: { className?: string; size?: number }) {
+export function Waves({ className = "", id: _id, size = 140 }: { className?: string; id?: string; size?: number }) {
   return (
     <svg width={size} height={size * 0.34} viewBox="0 0 140 48" fill="none" aria-hidden="true" className={className}>
       <g stroke="currentColor" strokeWidth="4" strokeLinecap="round" fill="none">
@@ -74,7 +93,7 @@ export function Waves({ className = "", size = 140 }: { className?: string; size
 }
 
 /** A botanical sprig, for quiet dividers. */
-export function Sprig({ className = "", size = 40 }: { className?: string; size?: number }) {
+export function Sprig({ className = "", id: _id, size = 40 }: { className?: string; id?: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true" className={className}>
       <path d="M20 38V14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />

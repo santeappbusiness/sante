@@ -14,7 +14,8 @@ export const MAYA: UserProfile = {
   preferred_minutes: 30,
   avoid_tags: ["jumping"],
   neurodivergent_mode: true,
-  self_reported_context: ["PMDD", "anemia"],
+  context:
+    "Some days I have plenty in the tank and some days I do not. I want a plan that meets me where I am instead of one I keep failing.",
   is_demo: true,
 };
 

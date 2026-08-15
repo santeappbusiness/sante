@@ -18,7 +18,10 @@ import { z } from "zod";
 
 /** 1 is lowest, 5 is highest. Energy and mood are "more is better";
  *  discomfort and sensory load are "more is harder". */
-export const readinessScale = z.number().int().min(1).max(5);
+export const SCALE_MIN = 1;
+export const SCALE_MAX = 5;
+
+export const readinessScale = z.number().int().min(SCALE_MIN).max(SCALE_MAX);
 
 export const redFlagSchema = z.enum([
   "chest_pain",
@@ -116,9 +119,12 @@ export const userProfileSchema = z.object({
   /** Movement tags this person always avoids. */
   avoid_tags: z.array(z.string()),
   neurodivergent_mode: z.boolean(),
-  /** Self-reported context. Storytelling only. Never used as a clinical input
-   *  and never referenced causally in generated copy. */
-  self_reported_context: z.array(z.string()).default([]),
+  /** Self-reported narrative context. Storytelling only. Never a clinical
+   *  input, never read by the red-flag gate, never referenced causally in
+   *  generated copy. Free text rather than tags, deliberately: a list of
+   *  condition labels invites being treated as structured clinical data, and
+   *  this is not a medical product. */
+  context: z.string().max(1000).nullable().default(null),
   is_demo: z.boolean().default(false),
 });
 

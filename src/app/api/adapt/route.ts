@@ -3,7 +3,7 @@ import { readinessCheckinSchema, type AgentEvent } from "@/types/domain";
 import { allowedMovements, computeReadiness } from "@/lib/readiness";
 import { runAdaptation } from "@/lib/luna";
 import { MAYA, TODAYS_PLAN } from "@/lib/demo-data";
-import { resolveUser, saveAdaptation, saveCheckin } from "@/lib/persist";
+import { loadProfile, resolveUser, saveAdaptation, saveCheckin } from "@/lib/persist";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -90,16 +90,12 @@ export async function POST(req: NextRequest) {
   }
 
   const checkin = parsed.data;
-  const profile = MAYA;
   const plan = TODAYS_PLAN;
 
   /* Quick adjustments the person asked for by tapping a chip. They tighten the
      constraints our own code computes; they never loosen them, and they never
      reach the model as instructions. */
   const fit: string[] = Array.isArray(body?.fit) ? body.fit : [];
-
-  /* Deterministic gate and constraints, before the model is reachable at all. */
-  const result = applyFit(computeReadiness(checkin, profile, plan), fit, profile);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -123,6 +119,23 @@ export async function POST(req: NextRequest) {
       try {
         /* Identity from the caller's token, never from the request body. */
         const profileId = await resolveUser(req.headers.get("authorization"));
+
+        /* Adapt for whoever this actually is. Falling back to the demo persona
+           keeps the app working for a visitor we cannot identify. */
+        const stored = profileId ? await loadProfile(profileId) : null;
+        const profile = stored
+          ? {
+              ...MAYA,
+              display_name: stored.display_name ?? MAYA.display_name,
+              goal: stored.goal ?? MAYA.goal,
+              preferred_minutes: stored.preferred_minutes ?? MAYA.preferred_minutes,
+              avoid_tags: stored.avoid_tags ?? MAYA.avoid_tags,
+              neurodivergent_mode: stored.nd_mode ?? MAYA.neurodivergent_mode,
+            }
+          : MAYA;
+
+        /* Deterministic gate and constraints, before the model is reachable. */
+        const result = applyFit(computeReadiness(checkin, profile, plan), fit, profile);
         emit({
           step: "authenticated",
           label: "Opened your plan for today",

@@ -13,6 +13,11 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const supabaseConfigured = Boolean(url && anonKey);
 
+/* Only offer Google when someone has actually configured it. A sign-in button
+   that throws in front of a judge is worse than no button at all. */
+export const googleAuthEnabled =
+  supabaseConfigured && process.env.NEXT_PUBLIC_GOOGLE_AUTH === "on";
+
 let client: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient | null {

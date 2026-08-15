@@ -15,12 +15,35 @@ import type { DailyPlan, ReadinessCheckin, ReadinessResult } from "@/types/domai
  */
 
 export async function resolveUser(authHeader: string | null): Promise<string | null> {
+  const user = await resolveUserRecord(authHeader);
+  return user?.id ?? null;
+}
+
+/** The whole user, when the caller needs the name Google gave us. */
+export async function resolveUserRecord(authHeader: string | null) {
   const admin = getSupabaseAdmin();
   if (!admin || !authHeader?.startsWith("Bearer ")) return null;
-  const token = authHeader.slice(7);
-  const { data, error } = await admin.auth.getUser(token);
+  const { data, error } = await admin.auth.getUser(authHeader.slice(7));
   if (error || !data.user) return null;
-  return data.user.id;
+  return data.user;
+}
+
+/**
+ * The person's real profile, when we know who they are.
+ *
+ * Without this the app adapts for the demo persona no matter who is signed in,
+ * and worse, a preference someone agreed to remember never changes anything.
+ */
+export async function loadProfile(profileId: string) {
+  const admin = getSupabaseAdmin();
+  if (!admin) return null;
+  const { data, error } = await admin
+    .from("profiles")
+    .select("display_name, goal, preferred_minutes, avoid_tags, nd_mode, context")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data;
 }
 
 export async function saveCheckin(

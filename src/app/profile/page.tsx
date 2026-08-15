@@ -115,6 +115,19 @@ export default function Profile() {
             </li>
           </ul>
         </section>
+
+        <section className="mt-10">
+          <button
+            onClick={async () => {
+              const sb = getSupabase();
+              await sb?.auth.signOut();
+              window.location.replace("/");
+            }}
+            className="rounded-xl bg-surface px-5 py-3 font-bold ring-1 ring-ink/15"
+          >
+            Sign out
+          </button>
+        </section>
       </main>
       <AppNav />
     </>

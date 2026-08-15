@@ -32,6 +32,10 @@ export default function Today() {
   const [streaming, setStreaming] = useState(false);
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const [nd, setNd] = useState(MAYA.neurodivergent_mode);
+  const [who, setWho] = useState<{ name: string; isDemo: boolean }>({
+    name: MAYA.display_name,
+    isDemo: true,
+  });
 
   /* One ephemeral session per visitor. Two judges opening the link at the same
      time each get their own Maya. */
@@ -47,6 +51,25 @@ export default function Today() {
   useEffect(() => {
     document.documentElement.setAttribute("data-nd", nd ? "on" : "off");
   }, [nd]);
+
+  /* An anonymous visitor is Maya. A signed-in person is themselves. */
+  useEffect(() => {
+    (async () => {
+      const sb = getSupabase();
+      if (!sb) return;
+      const { data } = await sb.auth.getSession();
+      const user = data.session?.user;
+      if (!user) return;
+      const { data: row } = await sb
+        .from("profiles")
+        .select("display_name, nd_mode")
+        .maybeSingle();
+      if (row?.display_name) {
+        setWho({ name: row.display_name, isDemo: Boolean(user.is_anonymous) });
+        setNd(Boolean(row.nd_mode));
+      }
+    })();
+  }, []);
 
   const patch = useCallback(
     async (p: Partial<StoredSession>) => {
@@ -167,7 +190,7 @@ export default function Today() {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <img src="/brand/sante-logo.png" alt="Santé" className="-ml-3 -mt-2 h-16 w-auto" />
-          <h1 className="text-3xl">Good morning, {MAYA.display_name}</h1>
+          <h1 className="text-3xl">Good morning, {who.name}</h1>
           <p className="text-sm text-ink-soft">{MAYA.goal}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -416,8 +439,8 @@ export default function Today() {
       )}
 
       <footer className="mt-14 text-xs leading-relaxed text-slate">
-        Maya is a fictional demo user. Santé is a wellness tool, not a medical one, and does not
-        diagnose, treat, or give medical advice.
+        {who.isDemo && "Maya is a fictional demo user. "}Santé is a wellness tool, not a medical
+        one, and does not diagnose, treat, or give medical advice.
       </footer>
     </main>
     <AppNav />

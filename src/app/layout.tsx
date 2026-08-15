@@ -12,6 +12,13 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: { card: "summary_large_image" },
+  manifest: "/manifest.webmanifest",
+};
+
+export const viewport = {
+  themeColor: "#F7F6F2",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

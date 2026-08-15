@@ -31,7 +31,15 @@ export default function Landing() {
         >
           Try the demo
         </Link>
-        <span className="text-sm text-slate">No sign-up. Opens as Maya, a fictional user.</span>
+        <Link
+          href="/signin"
+          className="rounded-xl px-5 py-3.5 font-bold text-ink-soft underline"
+        >
+          Sign in
+        </Link>
+        <span className="text-sm text-slate">
+          The demo needs no sign-up. It opens as Maya, a fictional user.
+        </span>
       </div>
 
       <div className="mt-16 grid gap-3 sm:grid-cols-3">

@@ -1,0 +1,12 @@
+{
+  "name": "Santé",
+  "short_name": "Santé",
+  "description": "Your plan can flex. A 20-second check-in, and today's session adapts to the capacity you actually have.",
+  "start_url": "/today",
+  "display": "standalone",
+  "background_color": "#F7F6F2",
+  "theme_color": "#F7F6F2",
+  "icons": [
+    { "src": "/brand/sante-logo.png", "sizes": "2000x2000", "type": "image/png", "purpose": "any" }
+  ]
+}

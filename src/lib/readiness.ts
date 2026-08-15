@@ -55,6 +55,13 @@ export function computeReadiness(
   let target_minutes = Math.round((plan.total_minutes * (0.25 + capacity * 0.75)) / 5) * 5;
   target_minutes = clamp(target_minutes, 5, plan.total_minutes);
 
+  /* A remembered preference is a ceiling, never a floor. If someone told us
+     that days like this should start around ten minutes, today does not come
+     back longer than that just because the arithmetic says it could. */
+  if (profile.preferred_minutes) {
+    target_minutes = Math.min(target_minutes, profile.preferred_minutes);
+  }
+
   let max_movements = score >= 70 ? plan.movements.length : score >= 45 ? 4 : 3;
 
   const excluded_tags = [...profile.avoid_tags];

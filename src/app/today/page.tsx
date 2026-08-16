@@ -10,7 +10,7 @@ import type {
   ReadinessCheckin,
 } from "@/types/domain";
 import { MAYA, MOVEMENTS, TODAYS_PLAN } from "@/lib/demo-data";
-import { getStore, type StoredSession } from "@/lib/storage";
+import { getStore, NOT_PERSISTED, type StoredSession } from "@/lib/storage";
 import { getSupabase } from "@/lib/supabase/client";
 import ReadinessRitual from "@/components/ReadinessRitual";
 import CapacityBloom, { toBloom } from "@/components/CapacityBloom";
@@ -88,6 +88,30 @@ export default function Today() {
   }, [session, pendingCheckin]);
 
   const adaptRef = useRef<((c: ReadinessCheckin) => void) | null>(null);
+
+  /* The completion screen has two halves: giving a verdict, and then being
+     asked about memory if that verdict completed a pattern. `rated` is which
+     half we are on. It only becomes true when a proposal is actually going to
+     be shown, so an ordinary session still leaves for today the moment it is
+     rated, exactly as before. */
+  const [rated, setRated] = useState(false);
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [lastVerdict, setLastVerdict] = useState<FeedbackVerdict | null>(null);
+  const [memoryBusy, setMemoryBusy] = useState(false);
+  const [memoryError, setMemoryError] = useState<string | null>(null);
+
+  /* Leaving the completion screen clears all of it, so a later session never
+     opens holding the previous one's error or its rated state. */
+  useEffect(() => {
+    if (stage === "done") return;
+    setRated(false);
+    setFeedbackBusy(false);
+    setFeedbackError(null);
+    setLastVerdict(null);
+    setMemoryBusy(false);
+    setMemoryError(null);
+  }, [stage]);
 
   /* Whatever they chose last time wins over the profile default. */
   useEffect(() => {
@@ -238,10 +262,77 @@ export default function Today() {
         setStreaming(false);
       }
     },
-    [session, patch, goTo]
+    /* `context` belongs here. It is read inside as contextTags(context), and
+       leaving it out froze the callback around the empty context it was first
+       created with, so selecting cramps or bloating changed the screen and
+       nothing else: the request still carried no tags. Every path that adapts
+       goes through this one callback, so the initial run, Retry, Still too
+       much and Make It Fit were all sending stale context. */
+    [session, patch, goTo, context]
   );
 
   adaptRef.current = (c: ReadinessCheckin) => adapt(c);
+
+  /**
+   * Rate the session that just finished.
+   *
+   * Save first, then count, then decide. The proposal used to be rendered from
+   * the feedback list as it stood *before* this verdict existed, above the
+   * buttons that were about to add to it, and answering navigated away
+   * immediately. So a second "still too much" showed nothing, and the offer
+   * turned up during a later session describing sessions that were not the
+   * ones on screen.
+   */
+  const submitFeedback = useCallback(
+    async (verdict: FeedbackVerdict) => {
+      if (!session || feedbackBusy) return;
+
+      setLastVerdict(verdict);
+      setFeedbackBusy(true);
+      setFeedbackError(null);
+
+      const result = session.result?.adaptation_id
+        ? (await store.saveFeedback?.(
+            session.result.adaptation_id,
+            verdict,
+            session.completed_movement_ids
+          )) ?? NOT_PERSISTED
+        : NOT_PERSISTED;
+
+      setFeedbackBusy(false);
+
+      /* A verdict we could not store is not evidence of anything. Stay here,
+         say so, and leave the buttons where they are. */
+      if (!result.ok) {
+        setFeedbackError(result.error);
+        return;
+      }
+
+      const nextFeedback = [verdict, ...session.feedback];
+      const tooMuch = nextFeedback.filter((f) => f === "too_much").length;
+      const propose = !session.memory_offered && tooMuch >= 2;
+
+      if (propose) {
+        await patch({ feedback: nextFeedback });
+        setRated(true);
+        return;
+      }
+
+      await goTo("plan", {
+        feedback: nextFeedback,
+        plan: TODAYS_PLAN,
+        completed_movement_ids: [],
+      });
+    },
+    [session, feedbackBusy, store, patch, goTo]
+  );
+
+  /* Both answers to the proposal end the same way: back to today, and not
+     asked again. Only reached once the preference is actually stored. */
+  const closeProposal = useCallback(
+    () => goTo("plan", { memory_offered: true, plan: TODAYS_PLAN, completed_movement_ids: [] }),
+    [goTo]
+  );
 
   if (!session) {
     return (
@@ -522,53 +613,80 @@ export default function Today() {
         <section className="mt-8 rounded-2xl bg-surface p-6 ring-1 ring-ink/10">
           <h2 className="text-3xl">You showed up for today.</h2>
           <p className="mt-1 text-ink-soft">The plan changed. The intention didn&rsquo;t.</p>
-          <p className="mt-4 text-sm font-bold">How was it?</p>
-          <p className="text-sm text-ink-soft">
-            We use this next time you check in. Nothing here is a score.
-          </p>
           <RebalanceProposal actualMinutes={plan.total_minutes} />
 
-          <MemoryProposal
-            feedback={session.feedback}
-            alreadyOffered={Boolean(session.memory_offered)}
-            adaptedMinutes={result?.adapted.total_minutes ?? 12}
-            onRemember={async (minutes) => {
-              await store.rememberPreferredMinutes?.(minutes);
-              await patch({ memory_offered: true });
-            }}
-            onDismiss={() => patch({ memory_offered: true })}
-          />
+          {rated ? (
+            /* Only reached when this verdict was stored and completed a
+               pattern, so the sessions it talks about include this one. */
+            <MemoryProposal
+              feedback={session.feedback}
+              alreadyOffered={Boolean(session.memory_offered)}
+              adaptedMinutes={result?.adapted.total_minutes ?? 12}
+              busy={memoryBusy}
+              error={memoryError}
+              onRemember={async (minutes) => {
+                setMemoryBusy(true);
+                setMemoryError(null);
+                const res = (await store.rememberPreferredMinutes?.(minutes)) ?? NOT_PERSISTED;
+                setMemoryBusy(false);
+                /* memory_offered is what stops us asking again, so it is only
+                   set once the preference itself is safely stored. Setting it
+                   on a failed write would lose both the preference and the
+                   chance to ask. */
+                if (!res.ok) {
+                  setMemoryError(res.error);
+                  return;
+                }
+                await closeProposal();
+              }}
+              onDismiss={closeProposal}
+            />
+          ) : (
+            <>
+              <p className="mt-4 text-sm font-bold">How was it?</p>
+              <p className="text-sm text-ink-soft">
+                We use this next time you check in. Nothing here is a score.
+              </p>
 
-          <div className="mt-5 grid gap-2 sm:grid-cols-3">
-            {(
-              [
-                ["too_much", "Still too much"],
-                ["just_right", "Just right"],
-                ["could_do_more", "Could do more"],
-              ] as Array<[FeedbackVerdict, string]>
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                onClick={async () => {
-                  if (session.result?.adaptation_id) {
-                    await store.saveFeedback?.(
-                      session.result.adaptation_id,
-                      value,
-                      session.completed_movement_ids
-                    );
-                  }
-                  await goTo("plan", {
-                    feedback: [value, ...session.feedback],
-                    plan: TODAYS_PLAN,
-                    completed_movement_ids: [],
-                  });
-                }}
-                className="rounded-xl bg-canvas px-4 py-3 font-bold ring-1 ring-ink/10"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+              <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                {(
+                  [
+                    ["too_much", "Still too much"],
+                    ["just_right", "Just right"],
+                    ["could_do_more", "Could do more"],
+                  ] as Array<[FeedbackVerdict, string]>
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    disabled={feedbackBusy}
+                    onClick={() => submitFeedback(value)}
+                    className="rounded-xl bg-canvas px-4 py-3 font-bold ring-1 ring-ink/10 disabled:opacity-60"
+                  >
+                    {feedbackBusy && lastVerdict === value ? "Saving" : label}
+                  </button>
+                ))}
+              </div>
+
+              {feedbackError && (
+                <div
+                  role="alert"
+                  className="mt-4 rounded-2xl bg-terracotta/10 px-5 py-4 text-sm text-terracotta"
+                >
+                  <p>
+                    {feedbackError} Your session still counted, but this answer has not been
+                    recorded yet.
+                  </p>
+                  <button
+                    onClick={() => lastVerdict && submitFeedback(lastVerdict)}
+                    disabled={feedbackBusy}
+                    className="mt-3 rounded-xl bg-surface px-5 py-2.5 font-bold text-ink ring-1 ring-ink/15 disabled:opacity-60"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </section>
       )}
 

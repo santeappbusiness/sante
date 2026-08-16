@@ -16,16 +16,26 @@ export default function MemoryProposal({
   feedback,
   alreadyOffered,
   adaptedMinutes,
+  busy = false,
+  error = null,
   onRemember,
   onDismiss,
 }: {
   feedback: FeedbackVerdict[];
   alreadyOffered: boolean;
   adaptedMinutes: number;
+  /** A save is in flight. Both answers are held until it resolves. */
+  busy?: boolean;
+  /** The preference could not be stored. The proposal stays put and the person
+   *  can try again, because dismissing it on our behalf would record a choice
+   *  they did not make. */
+  error?: string | null;
   onRemember: (minutes: number) => void;
   onDismiss: () => void;
 }) {
-  /* Two "too much" verdicts is a pattern worth naming. One is just a day. */
+  /* Two "too much" verdicts is a pattern worth naming. One is just a day.
+     The count includes the session just rated, which is why this is rendered
+     after the verdict is saved rather than before it is given. */
   const tooMuch = feedback.filter((f) => f === "too_much").length;
   if (alreadyOffered || tooMuch < 2) return null;
 
@@ -43,16 +53,24 @@ export default function MemoryProposal({
         Start days like this closer to {suggested} minutes?
       </p>
 
+      {error && (
+        <p role="alert" className="mt-3 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
+          {error} Nothing has been changed, so trying again is safe.
+        </p>
+      )}
+
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           onClick={() => onRemember(suggested)}
-          className="rounded-xl bg-coral px-5 py-2.5 font-bold text-coral-on"
+          disabled={busy}
+          className="rounded-xl bg-coral px-5 py-2.5 font-bold text-coral-on disabled:opacity-60"
         >
-          Remember this
+          {busy ? "Saving" : error ? "Try again" : "Remember this"}
         </button>
         <button
           onClick={onDismiss}
-          className="rounded-xl px-5 py-2.5 text-ink-soft underline"
+          disabled={busy}
+          className="rounded-xl px-5 py-2.5 text-ink-soft underline disabled:opacity-60"
         >
           Not now
         </button>

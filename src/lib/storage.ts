@@ -46,11 +46,33 @@ export type HistoryEntry = {
   why: string[];
 };
 
+/**
+ * What a write actually did.
+ *
+ * `void` was not enough to be honest with. Both writes below used to discard
+ * their errors, so the interface could not tell "stored" from "silently lost",
+ * and the app moved on either way. `durable` separates a row in the database
+ * from state we are only holding in this browser, so nothing claims a
+ * persistence that did not happen.
+ */
+export type PersistResult =
+  | { ok: true; durable: boolean }
+  | { ok: false; error: string };
+
+/** What a caller should assume when a store does not implement the write at
+ *  all. Not a failure: the browser-only store keeps this in the session and
+ *  never pretended otherwise. */
+export const NOT_PERSISTED: PersistResult = { ok: true, durable: false };
+
 export interface Store {
   /** Records a verdict against the adaptation it belongs to. */
-  saveFeedback?(adaptationId: string, verdict: FeedbackVerdict, completed: string[]): Promise<void>;
+  saveFeedback?(
+    adaptationId: string,
+    verdict: FeedbackVerdict,
+    completed: string[]
+  ): Promise<PersistResult>;
   /** Saves a preference the person explicitly agreed to remember. */
-  rememberPreferredMinutes?(minutes: number): Promise<void>;
+  rememberPreferredMinutes?(minutes: number): Promise<PersistResult>;
   /** Everything this visitor has done, for Progress. */
   history?(): Promise<HistoryEntry[]>;
   /** Starts a fresh demo session. One per visitor, so two judges never share Maya. */

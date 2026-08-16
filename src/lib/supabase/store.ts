@@ -1,6 +1,6 @@
 import type { DailyPlan, FeedbackVerdict, Movement } from "@/types/domain";
 import { movementById, TODAYS_PLAN } from "@/lib/demo-data";
-import type { HistoryEntry, Store, StoredSession } from "@/lib/storage";
+import { NOT_PERSISTED, type HistoryEntry, type PersistResult, type Store, type StoredSession } from "@/lib/storage";
 import { ensureAnonymousSession, getSupabase, newAnonymousSession } from "./client";
 
 /**
@@ -164,25 +164,51 @@ export class SupabaseStore implements Store {
     adaptationId: string,
     verdict: FeedbackVerdict,
     completed: string[]
-  ): Promise<void> {
+  ): Promise<PersistResult> {
     const sb = getSupabase();
+    /* No database configured at all. The app is running browser-only, which is
+       a supported mode, so this is not a failure. It is also not durable, and
+       the caller is told which. */
+    if (!sb) return NOT_PERSISTED;
+
     const id = await this.uid();
-    if (!sb || !id) return;
-    await sb.from("feedback").insert({
+    if (!id) {
+      return { ok: false, error: "We could not confirm who you are, so that was not saved." };
+    }
+
+    const { error } = await sb.from("feedback").insert({
       profile_id: id,
       adaptation_id: adaptationId,
       verdict,
       completed_movements: completed,
     });
+    /* The error used to be discarded here, so a rejected insert and a written
+       row were indistinguishable to everything upstream. */
+    if (error) {
+      return { ok: false, error: "That did not save. It may be the connection." };
+    }
+    return { ok: true, durable: true };
   }
 
   /* Written only when the person taps Remember. The column is in Serene's
      column-level UPDATE grant, so this is the client's to write. */
-  async rememberPreferredMinutes(minutes: number): Promise<void> {
+  async rememberPreferredMinutes(minutes: number): Promise<PersistResult> {
     const sb = getSupabase();
+    if (!sb) return NOT_PERSISTED;
+
     const id = await this.uid();
-    if (!sb || !id) return;
-    await sb.from("profiles").update({ preferred_minutes: minutes }).eq("id", id);
+    if (!id) {
+      return { ok: false, error: "We could not confirm who you are, so that was not saved." };
+    }
+
+    const { error } = await sb
+      .from("profiles")
+      .update({ preferred_minutes: minutes })
+      .eq("id", id);
+    if (error) {
+      return { ok: false, error: "That did not save. It may be the connection." };
+    }
+    return { ok: true, durable: true };
   }
 
   async history(): Promise<HistoryEntry[]> {

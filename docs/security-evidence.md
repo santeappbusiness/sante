@@ -66,3 +66,14 @@ the known gap and tracked : fitRequest and thecheckin request reach the adaption
 model, and violations() re-checks the model's output after, so an injected
 fitRequest cannot widen a constraint or introduce a disallowed movement.
 Fix queued: length-bound fitRequest, parse checkin/plan before use
+
+## XSS : free text input is safely escaped 
+
+the profile has content field where a user can type freely and which is later rendered back to them and was tested for script injection on the deployed app.
+<script>alert('xss')</script> entered into the context field and saved.
+after reload nothing changed. 
+
+## Demo-data fictional only 
+
+maya is presented in app as fictional only .
+

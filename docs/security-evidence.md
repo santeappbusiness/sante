@@ -48,3 +48,6 @@ it basically proves that the app will work even if AI switched off. Safety and a
 The honest part we are going to include is : 
 
 the backup plan sometimes says "we shortened today's session " even on days its not kinda awkward and a very restrictive profile can sometimes produce a plan with zero movements , we wrote those down openly and labelled them clearly that those and copy and edge case bugs not some error-leak bugs. no error details reaches the user either way . so we are honestly still claming that " failure dont leak" .
+
+## Dependency audit
+npm flagged one critical in Next (middleware auth-bypass, CVE-2025-29927). Not reachable — no middleware in the codebase, and authorisation is enforced in Postgres RLS and column grants, not at the edge. Reachable risk limited to RSC denial-of-service (availability only, behind Vercel). Pinned deliberately on 14.2 for judging; major upgrade deferred.

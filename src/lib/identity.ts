@@ -45,6 +45,10 @@ const LEGACY_KEYS = [
   "sante-pending-checkin",
 ];
 
+/** Base key for the check-in handed from Home to Today. Lives here because
+ *  this module owns the namespace and the purge that this key has to survive. */
+export const PENDING_CHECKIN = "pending-checkin";
+
 export function scopedKey(base: string, id: string): string {
   return `${PREFIX}${id}:${base}`;
 }
@@ -172,5 +176,38 @@ export function writeScoped(base: string, id: string | null, value: unknown) {
   if (!id) return;
   try {
     localStorage.setItem(scopedKey(base, id), JSON.stringify(value));
+  } catch {}
+}
+
+/* ------------------------------------------------------------------ *
+ * The same, in sessionStorage, for state that should not outlive the tab.
+ *
+ * These exist because a hand-off between two pages has to survive the purge
+ * that happens when the second page resolves its identity. An unscoped key
+ * looks exactly like the old global leak and gets deleted on arrival, which is
+ * how a check-in answered on Home reached Today as nothing at all.
+ * ------------------------------------------------------------------ */
+
+export function readScopedSession<T>(base: string, id: string | null): T | null {
+  if (!id) return null;
+  try {
+    const raw = sessionStorage.getItem(scopedKey(base, id));
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeScopedSession(base: string, id: string | null, value: unknown) {
+  if (!id) return;
+  try {
+    sessionStorage.setItem(scopedKey(base, id), JSON.stringify(value));
+  } catch {}
+}
+
+export function clearScopedSession(base: string, id: string | null) {
+  if (!id) return;
+  try {
+    sessionStorage.removeItem(scopedKey(base, id));
   } catch {}
 }

@@ -10,7 +10,7 @@ import CapacityBloom, { capacityLabel, toBloom } from "@/components/CapacityBloo
 import CheckInSheet from "@/components/CheckInSheet";
 import CheckInPrompt from "@/components/CheckInPrompt";
 import Orientation, { hasSeenOrientation } from "@/components/Orientation";
-import { useIdentity } from "@/lib/identity";
+import { PENDING_CHECKIN, useIdentity, writeScopedSession } from "@/lib/identity";
 import { readCalm, useCalmSync } from "@/components/CalmMode";
 import { recommendWorkouts } from "@/lib/workouts";
 import { WorkoutCard } from "@/components/WorkoutCard";
@@ -334,10 +334,13 @@ export default function Home() {
         onClose={() => setSheetOpen(false)}
         onSubmit={(c) => {
           /* Hand the answers to Today, which owns the adaptation. The sheet's
-             job is collecting them without making anyone leave Home. */
-          try {
-            sessionStorage.setItem("sante-pending-checkin", JSON.stringify(c));
-          } catch {}
+             job is collecting them without making anyone leave Home.
+
+             Scoped to this identity, and not because two people share a tab:
+             an unscoped key is indistinguishable from the old global leak, so
+             Today deletes it while resolving who this is, and the check-in
+             arrives as nothing. */
+          writeScopedSession(PENDING_CHECKIN, identity?.id ?? null, c);
           window.location.assign("/today?adapt=1");
         }}
       />

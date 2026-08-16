@@ -12,7 +12,12 @@ import type {
 import { MAYA, MOVEMENTS, TODAYS_PLAN } from "@/lib/demo-data";
 import { planForWorkoutId } from "@/lib/workouts";
 import { getStore, NOT_PERSISTED, type StoredSession } from "@/lib/storage";
-import { useIdentity } from "@/lib/identity";
+import {
+  clearScopedSession,
+  PENDING_CHECKIN,
+  readScopedSession,
+  useIdentity,
+} from "@/lib/identity";
 import { getSupabase } from "@/lib/supabase/client";
 import ReadinessRitual from "@/components/ReadinessRitual";
 import CapacityBloom, { toBloom } from "@/components/CapacityBloom";
@@ -111,20 +116,29 @@ export default function Today() {
       const saved = (s.stage as Stage) || "plan";
       setStage(saved === "working" ? "plan" : saved);
 
-      /* Someone checked in from Home. Run it now rather than making them
-         answer the same four questions again on this page. */
-      try {
-        const pending = sessionStorage.getItem("sante-pending-checkin");
-        if (pending && params.has("adapt")) {
-          sessionStorage.removeItem("sante-pending-checkin");
-          setPendingCheckin(JSON.parse(pending));
-        }
-      } catch {}
+      /* Whether Home sent a check-in with us. Read in its own effect below,
+         because the answer is stored per identity and the identity may not be
+         resolved yet at this point in the load. */
+      setAdaptRequested(params.has("adapt"));
     })();
   }, [store]);
 
+  const [adaptRequested, setAdaptRequested] = useState(false);
   /* Deferred so the adapt call runs once the session exists. */
   const [pendingCheckin, setPendingCheckin] = useState<ReadinessCheckin | null>(null);
+
+  /* The check-in answered on Home, collected once we know whose it is, and run
+     rather than asking the same four questions again on this page. */
+  useEffect(() => {
+    if (!adaptRequested || identityLoading) return;
+    const id = identity?.id ?? null;
+    const pending = readScopedSession<ReadinessCheckin>(PENDING_CHECKIN, id);
+    if (!pending) return;
+    clearScopedSession(PENDING_CHECKIN, id);
+    setAdaptRequested(false);
+    setPendingCheckin(pending);
+  }, [adaptRequested, identityLoading, identity]);
+
   useEffect(() => {
     if (session && pendingCheckin) {
       const c = pendingCheckin;

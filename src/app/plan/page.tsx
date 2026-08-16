@@ -54,7 +54,7 @@ export default function Plan() {
 
   return (
     <>
-      <main className="mx-auto max-w-3xl px-5 py-10 pb-28 sm:pb-10">
+      <main className="mx-auto max-w-3xl px-5 py-10 pb-28 lg:pb-10 lg:pl-56">
         <div className="relative overflow-hidden rounded-[24px] bg-moss/20 p-6">
           <div aria-hidden="true" className="absolute -bottom-2 -right-4 text-moss/40">
             <Waves size={180} />

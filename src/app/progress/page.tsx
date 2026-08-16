@@ -31,7 +31,7 @@ export default function Progress() {
 
   return (
     <>
-      <main className="pb-28 sm:pb-10">
+      <main className="pb-28 lg:pb-10 lg:pl-56">
         <section className="relative overflow-hidden bg-moss/25 px-5 pb-12 pt-10">
           <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-16 text-moss/40">
             <Blob size={300} />

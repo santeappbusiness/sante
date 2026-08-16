@@ -50,7 +50,7 @@ export default function Home() {
 
   return (
     <>
-      <main className="pb-28 sm:pb-10">
+      <main className="pb-28 lg:pb-10 lg:pl-56">
         {/* Greeting and capacity, as one editorial block on a tinted ground. */}
         <section className="relative overflow-hidden bg-lavender/30 px-5 pb-10 pt-10">
           <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 text-lavender/60">
@@ -58,7 +58,7 @@ export default function Home() {
           </div>
 
           <div className="relative mx-auto max-w-3xl">
-            <img src="/brand/sante-logo.png" alt="Santé" className="-ml-3 w-32 sm:w-36" />
+            <img src="/brand/sante-logo.png" alt="Santé" className="-ml-3 w-32 sm:w-36 lg:hidden" />
             <h1 className="mt-2 font-display text-4xl leading-tight sm:text-5xl">
               {greeting}, {name}
             </h1>

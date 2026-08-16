@@ -5,6 +5,7 @@ import { MAYA } from "@/lib/demo-data";
 import { getSupabase } from "@/lib/supabase/client";
 import AppNav from "@/components/AppNav";
 import { Blob, Flower, Sprig } from "@/components/BrandShapes";
+import CalmModeToggle, { readCalm } from "@/components/CalmMode";
 
 /**
  * Profile, and the part that matters most: what Santé remembers.
@@ -19,6 +20,9 @@ type Remembered = { label: string; value: string; source: string };
 export default function Profile() {
   const [remembered, setRemembered] = useState<Remembered[]>([]);
   const [loading, setLoading] = useState(true);
+  const [calm, setCalm] = useState(false);
+
+  useEffect(() => setCalm(readCalm(false)), []);
 
   useEffect(() => {
     (async () => {
@@ -46,7 +50,7 @@ export default function Profile() {
           source: "You told us during onboarding",
         });
       rows.push({
-        label: "Simplified mode",
+        label: "Calm mode",
         value: data?.nd_mode ? "On" : "Off",
         source: "Your accessibility choice",
       });
@@ -57,13 +61,13 @@ export default function Profile() {
 
   return (
     <>
-      <main className="pb-28 sm:pb-10">
+      <main className="pb-28 lg:pb-10 lg:pl-56">
         <section className="relative overflow-hidden bg-lavender/30 px-5 pb-10 pt-10">
           <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-14 text-lavender/60">
             <Blob size={280} />
           </div>
           <div className="relative mx-auto max-w-3xl">
-            <img src="/brand/sante-logo.png" alt="Santé" className="-ml-3 w-32 sm:w-36" />
+            <img src="/brand/sante-logo.png" alt="Santé" className="-ml-3 w-32 sm:w-36 lg:hidden" />
             <h1 className="mt-2 font-display text-4xl leading-tight sm:text-5xl">
               {MAYA.display_name}
             </h1>
@@ -122,6 +126,10 @@ export default function Profile() {
             This is yours to write and yours to change. Santé never treats it as medical
             information and never uses it to justify a recommendation.
           </p>
+        </section>
+
+        <section className="mt-10">
+          <CalmModeToggle value={calm} onChange={setCalm} />
         </section>
 
         <section className="mt-10">

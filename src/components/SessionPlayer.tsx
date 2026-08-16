@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { DailyPlan, Movement } from "@/types/domain";
 import { Blob, Sprig } from "./BrandShapes";
+import MovementTimer from "./MovementTimer";
+import { howToUrl } from "@/lib/demo-data";
 
 /**
  * The session, one movement at a time.
@@ -128,14 +130,33 @@ export default function SessionPlayer({
               {movement.minutes} min · {movement.intensity}
             </p>
           </div>
-          <span aria-hidden="true" className="shrink-0 text-moss">
-            <Sprig size={38} />
-          </span>
+
+          {/* Not sure how it goes? Somewhere real, rather than a tooltip that
+              repeats the instruction in fewer words. */}
+          <a
+            href={howToUrl(movement)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`How to do ${movement.name}, opens a search in a new tab`}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-canvas text-lg font-bold text-ink-soft ring-1 ring-ink/15 hover:text-ink"
+          >
+            ?
+          </a>
         </div>
 
         <p className="relative mt-6 max-w-lg text-xl leading-relaxed text-ink-soft">
           {movement.instructions}
         </p>
+
+        <div className="relative mt-6">
+          <MovementTimer
+            minutes={movement.minutes}
+            quiet={quiet}
+            onComplete={() => {
+              if (!completed.includes(movement.id)) onToggleComplete(movement.id);
+            }}
+          />
+        </div>
 
         {lastSwap && (
           <p className="relative mt-6 rounded-2xl bg-moss/25 px-5 py-4 text-sm" role="status">

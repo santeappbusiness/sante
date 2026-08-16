@@ -66,6 +66,33 @@
   display: none !important;
 }
 
+/* Calm mode does real work. Bigger type, more air, quieter surfaces, and
+   nothing that moves. A mode that only disables animation is not a mode. */
+[data-nd="on"] body,
+[data-nd="on"] p,
+[data-nd="on"] li,
+[data-nd="on"] button,
+[data-nd="on"] label {
+  font-size: 1.06em;
+  line-height: 1.72;
+}
+
+[data-nd="on"] main section,
+[data-nd="on"] main > div > section {
+  margin-top: 2.25rem;
+}
+
+/* Ambient shapes recede rather than disappearing, so the page keeps its
+   character without competing for attention. */
+[data-nd="on"] [aria-hidden="true"] svg {
+  opacity: 0.35;
+}
+
+/* Secondary actions stop shouting, so the one that matters is obvious. */
+[data-nd="on"] .nd-secondary {
+  opacity: 0.75;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

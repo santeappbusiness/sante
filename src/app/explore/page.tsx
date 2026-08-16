@@ -35,7 +35,7 @@ const MOTIF_TONE = [
 export default function Explore() {
   return (
     <>
-      <main className="mx-auto max-w-3xl px-5 py-10 pb-28 sm:pb-10">
+      <main className="mx-auto max-w-3xl px-5 py-10 pb-28 lg:pb-10 lg:pl-56">
         <h1 className="font-display text-4xl leading-tight sm:text-5xl">Explore</h1>
         <p className="mt-2 max-w-md text-lg text-ink-soft">
           Grouped by how a day feels, not by what a muscle is called.

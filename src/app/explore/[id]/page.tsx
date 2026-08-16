@@ -30,7 +30,7 @@ export default function CollectionPage() {
 
   return (
     <>
-      <main className="mx-auto max-w-3xl px-5 py-10 pb-28 sm:pb-10">
+      <main className="mx-auto max-w-3xl px-5 py-10 pb-28 lg:pb-10 lg:pl-56">
         <Link href="/explore" className="text-sm text-slate underline">
           Explore
         </Link>

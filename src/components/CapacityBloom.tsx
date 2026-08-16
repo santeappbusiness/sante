@@ -3,17 +3,15 @@ import type { ReadinessCheckin } from "@/types/domain";
 /**
  * The Santé Bloom.
  *
- * Four petals, one per thing we asked: energy, comfort, mood, sensory calm.
- * Each petal's size and fullness comes from that answer, so the shape of the
- * flower is the shape of the day.
+ * Four petals, one per thing we asked. Each petal's length and width come from
+ * that answer, so the shape of the flower is the shape of the day.
  *
- * Deliberately NOT a score. There is no "your health is 73". The label is a
- * word, the four values stay visible underneath, and nothing here is a
- * measurement of a person.
+ * The petals are drawn as real petal paths radiating from the centre, not
+ * overlapping ellipses: ellipses centred on the middle cross each other and
+ * read as a smudge rather than a bloom.
  *
- * Accessibility: every petal has a text equivalent below, so no information
- * lives in colour or shape alone, and the whole thing is static when the
- * reader prefers reduced motion.
+ * Deliberately not a score. The label is a word, the four values stay written
+ * out underneath, and nothing here is a measurement of a person.
  */
 
 export type BloomValues = {
@@ -23,8 +21,8 @@ export type BloomValues = {
   calm: number;
 };
 
-/** Discomfort and sensory load are "more is harder", so they flip: what we
- *  draw is how much room the person has, not how much is wrong. */
+/** Discomfort and sensory load are "more is harder", so they flip: what we draw
+ *  is how much room someone has, not how much is wrong. */
 export function toBloom(checkin: ReadinessCheckin): BloomValues {
   return {
     energy: checkin.energy,
@@ -49,6 +47,24 @@ const PETALS: Array<{ key: keyof BloomValues; label: string; angle: number }> = 
   { key: "calm", label: "Sensory calm", angle: 270 },
 ];
 
+/**
+ * One petal, growing upward from the centre.
+ *
+ * `reach` is how far it extends, `spread` how wide it opens. Both come from the
+ * answer, so a low day makes a small tight bloom and a good day a broad open
+ * one, and the silhouette differs at a glance rather than only in opacity.
+ */
+function petalPath(reach: number, spread: number): string {
+  const tip = 100 - reach;
+  const waist = 100 - reach * 0.45;
+  return [
+    `M 100 100`,
+    `C ${100 - spread} ${waist}, ${100 - spread * 0.72} ${tip + reach * 0.16}, 100 ${tip}`,
+    `C ${100 + spread * 0.72} ${tip + reach * 0.16}, ${100 + spread} ${waist}, 100 100`,
+    `Z`,
+  ].join(" ");
+}
+
 export default function CapacityBloom({
   values,
   size = 200,
@@ -58,7 +74,7 @@ export default function CapacityBloom({
   values: BloomValues;
   size?: number;
   showLegend?: boolean;
-  /** Simplified mode: less saturation, no motion, plainer shapes. */
+  /** Simplified mode: less saturation, no motion. */
   quiet?: boolean;
 }) {
   const label = capacityLabel(values);
@@ -75,34 +91,34 @@ export default function CapacityBloom({
       >
         {PETALS.map(({ key, angle }) => {
           const v = Math.max(1, Math.min(5, values[key]));
-          /* A petal at 1 is small and faint; at 5 it is full and open. The
-             range never reaches zero, because a hard day is still a day. */
-          const reach = 26 + (v / 5) * 40;
-          const width = 16 + (v / 5) * 20;
-          const opacity = quiet ? 0.3 + (v / 5) * 0.25 : 0.35 + (v / 5) * 0.45;
+          /* Never reaches zero: a hard day is still a day. */
+          const reach = 30 + (v / 5) * 52;
+          const spread = 20 + (v / 5) * 22;
+          const opacity = quiet ? 0.42 + (v / 5) * 0.2 : 0.5 + (v / 5) * 0.35;
 
           return (
-            <ellipse
+            <path
               key={key}
-              cx="100"
-              cy={100 - reach}
-              rx={width}
-              ry={reach}
+              d={petalPath(reach, spread)}
               fill="var(--bloom-petal)"
               opacity={opacity}
               transform={`rotate(${angle} 100 100)`}
               style={
                 quiet
                   ? undefined
-                  : { transition: "all 600ms cubic-bezier(0.2, 0.8, 0.2, 1)" }
+                  : { transition: "d 600ms cubic-bezier(0.2,0.8,0.2,1), opacity 600ms" }
               }
             />
           );
         })}
-        <circle cx="100" cy="100" r="13" fill="var(--bloom-center)" />
+
+        {/* The centre sits on top of where the petals meet, so the joins read as
+            a flower rather than as four shapes overlapping. */}
+        <circle cx="100" cy="100" r="15" fill="var(--bloom-center)" />
+        <circle cx="100" cy="100" r="6" fill="var(--bloom-petal)" opacity="0.55" />
       </svg>
 
-      <figcaption className="mt-2 text-center">
+      <figcaption className="mt-3 text-center">
         <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
           Today&rsquo;s capacity
         </p>
@@ -110,11 +126,24 @@ export default function CapacityBloom({
       </figcaption>
 
       {showLegend && (
-        <dl className="mt-4 grid w-full max-w-xs grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+        <dl className="mt-5 grid w-full max-w-xs grid-cols-2 gap-x-6 gap-y-2 text-sm">
           {PETALS.map(({ key, label: petalLabel }) => (
-            <div key={key} className="flex justify-between gap-2">
+            <div key={key} className="flex items-center justify-between gap-2">
               <dt className="text-ink-soft">{petalLabel}</dt>
-              <dd className="font-mono tabular-nums">{values[key]}/5</dd>
+              <dd className="flex items-center gap-1.5">
+                <span className="font-mono tabular-nums">{values[key]}</span>
+                <span aria-hidden="true" className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <span
+                      key={n}
+                      className={
+                        "h-1.5 w-1.5 rounded-full " +
+                        (n <= values[key] ? "bg-moss-deep" : "bg-ink/15")
+                      }
+                    />
+                  ))}
+                </span>
+              </dd>
             </div>
           ))}
         </dl>

@@ -17,7 +17,7 @@ export default function Saved() {
 
   return (
     <>
-      <main className="mx-auto max-w-3xl px-5 py-10 pb-28 sm:pb-10">
+      <main className="mx-auto max-w-3xl px-5 py-10 pb-28 lg:pb-10 lg:pl-56">
         <h1 className="text-3xl">Saved</h1>
         <p className="mt-1 text-ink-soft">Movements you wanted to come back to.</p>
 

@@ -20,6 +20,7 @@ import SessionPlayer from "@/components/SessionPlayer";
 import MakeItFit from "@/components/MakeItFit";
 import MemoryProposal from "@/components/MemoryProposal";
 import AppNav from "@/components/AppNav";
+import CalmModeToggle, { readCalm } from "@/components/CalmMode";
 import AdaptationReceipt, { type Receipt } from "@/components/AdaptationReceipt";
 import RebalanceProposal from "@/components/RebalanceProposal";
 import TodayContext, { contextTags, type TodayContextValue } from "@/components/TodayContext";
@@ -61,9 +62,10 @@ export default function Today() {
     })();
   }, [store]);
 
+  /* Whatever they chose last time wins over the profile default. */
   useEffect(() => {
-    document.documentElement.setAttribute("data-nd", nd ? "on" : "off");
-  }, [nd]);
+    setNd(readCalm(MAYA.neurodivergent_mode));
+  }, []);
 
   /* An anonymous visitor is Maya. A signed-in person is themselves. */
   useEffect(() => {
@@ -210,27 +212,20 @@ export default function Today() {
 
   return (
     <>
-    <main className="mx-auto max-w-3xl px-5 py-8 pb-28 sm:pb-10">
+    <main className="px-5 py-8 pb-28 lg:pb-10 lg:pl-64">
+      <div className="mx-auto max-w-3xl">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <img src="/brand/sante-logo.png" alt="Santé" className="-ml-2 w-24 sm:w-28" />
+          <img src="/brand/sante-logo.png" alt="Santé" className="-ml-2 w-24 sm:w-28 lg:hidden" />
           <h1 className="mt-1 font-display text-4xl leading-tight">Today</h1>
           <p className="mt-1 text-sm text-ink-soft">
             {who.name}, this is what you planned and what today can be.
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <label className="flex items-center gap-2 text-sm text-ink-soft">
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-moss-deep"
-              checked={nd}
-              onChange={(e) => setNd(e.target.checked)}
-            />
-            Simplified mode
-          </label>
+          <CalmModeToggle value={nd} onChange={setNd} compact />
           <button
-            className="text-xs text-slate underline"
+            className="nd-secondary text-xs text-slate underline"
             onClick={async () => {
               const fresh = await store.reset(TODAYS_PLAN);
               setSession(fresh);
@@ -496,6 +491,7 @@ export default function Today() {
         {who.isDemo && "Maya is a fictional demo user. "}Santé is a wellness tool, not a medical
         one, and does not diagnose, treat, or give medical advice.
       </footer>
+      </div>
     </main>
     <AppNav />
     </>

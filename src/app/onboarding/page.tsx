@@ -197,9 +197,9 @@ export default function Onboarding() {
               }}
               className="rounded-xl bg-lavender/35 px-5 py-4 text-left"
             >
-              <span className="font-bold">Simplified</span>
+              <span className="font-bold">Calm mode</span>
               <span className="mt-0.5 block text-sm text-ink-soft">
-                Fewer choices, shorter instructions, one thing at a time, no motion.
+                No motion, fewer choices, shorter instructions, larger text, one thing at a time.
               </span>
             </button>
           </div>

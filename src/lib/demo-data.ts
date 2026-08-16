@@ -203,3 +203,51 @@ export function collectionMovements(id: string): Movement[] {
   const c = COLLECTIONS.find((x) => x.id === id);
   return c ? MOVEMENTS.filter(c.match) : [];
 }
+
+/* The rest of the library.
+ *
+ * Each movement carries enough to be useful on its own: an instruction someone
+ * can follow, tags the constraint engine understands, and a search term so the
+ * question mark in the session leads somewhere real. Santé does not host video,
+ * and pretending otherwise would be worse than linking out honestly.
+ */
+const LIBRARY: Movement[] = [
+  { id: "mv_neck_tilt", name: "Neck tilts", intensity: "low", minutes: 3, tags: ["seated", "quiet", "mobility"], instructions: "Drop one ear toward your shoulder and wait. Swap sides." },
+  { id: "mv_wrist", name: "Wrist circles", intensity: "low", minutes: 2, tags: ["seated", "quiet", "mobility"], instructions: "Slow circles both ways, then spread your fingers wide." },
+  { id: "mv_thoracic", name: "Seated twist", intensity: "low", minutes: 4, tags: ["seated", "quiet", "mobility"], instructions: "Sit tall, turn gently to one side, hold, then the other." },
+  { id: "mv_chest_open", name: "Doorway chest opener", intensity: "low", minutes: 3, tags: ["standing", "quiet", "mobility"], instructions: "Forearm on the door frame, turn away until you feel a stretch." },
+  { id: "mv_calf", name: "Calf stretch", intensity: "low", minutes: 3, tags: ["standing", "quiet", "mobility"], instructions: "Step one foot back, heel down, lean into the front leg." },
+  { id: "mv_hamstring", name: "Hamstring stretch", intensity: "low", minutes: 4, tags: ["standing", "quiet", "mobility"], instructions: "One heel forward, hinge at the hips until the back of the leg opens." },
+  { id: "mv_child", name: "Child's pose", intensity: "low", minutes: 5, tags: ["floor_work", "quiet", "recovery"], instructions: "Knees wide, sit back toward your heels, let your arms rest forward." },
+  { id: "mv_supine_twist", name: "Lying twist", intensity: "low", minutes: 5, tags: ["floor_work", "quiet", "recovery"], instructions: "On your back, drop both knees to one side and breathe." },
+  { id: "mv_pelvic_tilt", name: "Pelvic tilts", intensity: "low", minutes: 4, tags: ["floor_work", "quiet", "mobility"], instructions: "On your back, knees bent, rock your pelvis slowly with your breath." },
+  { id: "mv_box_breath", name: "Box breathing", intensity: "low", minutes: 4, tags: ["seated", "breathing", "quiet", "recovery"], instructions: "In for four, hold four, out for four, hold four." },
+  { id: "mv_hum", name: "Long exhale", intensity: "low", minutes: 3, tags: ["seated", "breathing", "quiet", "recovery"], instructions: "Breathe in normally, then make the out-breath twice as long." },
+  { id: "mv_shoulder_blade", name: "Shoulder blade squeeze", intensity: "low", minutes: 3, tags: ["seated", "quiet"], instructions: "Draw your shoulder blades together, hold a moment, release." },
+  { id: "mv_heel_raise", name: "Heel raises", intensity: "low", minutes: 4, tags: ["standing"], instructions: "Rise onto your toes and lower slowly. Hold something if you need to." },
+  { id: "mv_sit_stand", name: "Sit to stand", intensity: "low", minutes: 5, tags: ["standing", "strength"], instructions: "From a chair, stand and sit without using your hands if you can." },
+  { id: "mv_wall_sit", name: "Wall sit", intensity: "moderate", minutes: 4, tags: ["standing", "strength"], instructions: "Back on the wall, slide down until your knees bend, hold." },
+  { id: "mv_bird_dog", name: "Bird dog", intensity: "moderate", minutes: 5, tags: ["floor_work", "strength"], instructions: "On hands and knees, extend the opposite arm and leg, then swap." },
+  { id: "mv_side_plank", name: "Side plank on knees", intensity: "moderate", minutes: 4, tags: ["floor_work", "strength"], instructions: "On your side, forearm down, knees bent, lift your hips." },
+  { id: "mv_hip_hinge", name: "Hip hinge", intensity: "moderate", minutes: 5, tags: ["standing", "strength"], instructions: "Push your hips back with a long spine, then stand tall again." },
+  { id: "mv_lateral", name: "Side steps", intensity: "moderate", minutes: 5, tags: ["standing"], instructions: "Step wide to one side and back, keeping your knees soft." },
+  { id: "mv_press", name: "Overhead press", intensity: "moderate", minutes: 5, tags: ["standing", "strength", "equipment"], instructions: "Press weight overhead without arching your back, lower with control." },
+  { id: "mv_curl", name: "Bicep curls", intensity: "moderate", minutes: 4, tags: ["standing", "strength", "equipment"], instructions: "Elbows at your sides, curl up, lower slowly." },
+  { id: "mv_deadlift", name: "Romanian deadlift", intensity: "moderate", minutes: 6, tags: ["standing", "strength", "equipment"], instructions: "Hinge at the hips with a flat back, weight close to your legs." },
+  { id: "mv_split_squat", name: "Split squat", intensity: "moderate", minutes: 6, tags: ["standing", "strength"], instructions: "One foot forward, lower the back knee toward the floor." },
+  { id: "mv_calf_raise_w", name: "Weighted calf raise", intensity: "moderate", minutes: 4, tags: ["standing", "strength", "equipment"], instructions: "Rise onto your toes holding weight, pause at the top." },
+  { id: "mv_plank_shoulder", name: "Plank shoulder taps", intensity: "high", minutes: 4, tags: ["floor_work", "strength"], instructions: "In a plank, tap the opposite shoulder without rocking your hips." },
+  { id: "mv_squat_jump", name: "Squat to toe raise", intensity: "moderate", minutes: 5, tags: ["standing", "strength"], instructions: "Squat, then rise all the way onto your toes. No jump needed." },
+  { id: "mv_high_knee", name: "High knees", intensity: "high", minutes: 4, tags: ["standing", "jumping"], instructions: "Drive your knees up at a pace you can sustain." },
+  { id: "mv_jack", name: "Star jumps", intensity: "high", minutes: 4, tags: ["standing", "jumping"], instructions: "Jump your feet wide and arms overhead, then back." },
+  { id: "mv_burpee_step", name: "Step-back burpee", intensity: "high", minutes: 6, tags: ["floor_work", "strength"], instructions: "Hands down, step back one foot at a time, step in, stand." },
+  { id: "mv_sprint", name: "Fast marching", intensity: "high", minutes: 5, tags: ["standing"], instructions: "March hard on the spot, arms driving, for short bursts." },
+];
+
+MOVEMENTS.push(...LIBRARY);
+
+/** Where the question mark in a session goes. Santé does not host video, so it
+ *  sends people somewhere they can actually watch the movement done properly. */
+export function howToUrl(m: Movement): string {
+  return `https://www.google.com/search?q=${encodeURIComponent("how to do " + m.name + " exercise form")}`;
+}

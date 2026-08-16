@@ -168,7 +168,7 @@ export async function runAdaptation({
     `They reported: ${result.drivers.join("; ")}.`,
     `Constraints: maximum intensity ${result.max_intensity}, target ${result.target_minutes} minutes, at most ${result.max_movements} movements.`,
     profile.neurodivergent_mode
-      ? "This person uses the simplified mode, so prefer fewer movements and the quietest options."
+      ? "This person uses calm mode, so prefer fewer movements and the quietest options."
       : "",
   ]
     .filter(Boolean)

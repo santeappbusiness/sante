@@ -29,3 +29,22 @@ it produces an error not a quiet little session for someone who reported chest p
 - /api/adapt does not yet require a bearer token, so the per-profile database
   rate limit does not cover unauthenticated callers. Fix agreed in principle,
   queued behind coordination with the route owner
+
+## AI validation : out-of-schema output is rejected
+
+Now this is about not trusting what luna actually sends back for that to happen, we made sure that the model returns a plan , but our code will treat is basically as a suspect until it passed two fundamentally important checks which are : 
+Shape check aka Zod basically this check checks if the format is right by format being right we mean the right fields , right types and if not ? it will throw it out.
+Rules check aka Violations , now this check if the shape is right, does the content of the data obey today's limits?  it will rejects the plan if it contains the movement that was not on the allowed list or uses more movements than allowed is it too intense? or runs too long ,stuff like that . 
+
+So if either of the check failed? ask the model once more if it fails again then use the safe backup plan instead.
+now comes the strongest part : 
+the final movements are not taken from the model's words at all , the model runs ids like mv_walk, and our code looks each ids up in our own catalogue and rebuild the movement from there . So even if the model tried to invent a movement or rewrites the instructions it legit cannot so thats what makes the model true by construction , not hope. 
+
+Errors: failures fall back without leaking
+now this part is about what happens when things break . The model can time out , the network can drop . the key aka API could go missing or the output fail the validation twice. in every one of those cases the user will get either a proper backup plan or an honest answer aka "something went wrong" 
+now you all must be wondering why does this part even matters? 
+it basically proves that the app will work even if AI switched off. Safety and a usable session dont depends on the model answering and thats basically the whole crux of the product. 
+
+The honest part we are going to include is : 
+
+the backup plan sometimes says "we shortened today's session " even on days its not kinda awkward and a very restrictive profile can sometimes produce a plan with zero movements , we wrote those down openly and labelled them clearly that those and copy and edge case bugs not some error-leak bugs. no error details reaches the user either way . so we are honestly still claming that " failure dont leak" .

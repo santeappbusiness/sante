@@ -2,10 +2,30 @@
   <img src="public/brand/sante-mark.png" alt="Santé" width="96" />
   <h1>Santé</h1>
   <h3>Keep the goal. Change the route.</h3>
+
+  <p>
+    <img src="https://img.shields.io/badge/Next.js-14.2.15-black?logo=next.js" alt="Next.js" />
+    <img src="https://img.shields.io/badge/TypeScript-5.5-blue?logo=typescript" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/Supabase-Auth%20%2B%20Postgres-3ECF8E?logo=supabase" alt="Supabase" />
+    <img src="https://img.shields.io/website?url=https%3A%2F%2Fsante-chi.vercel.app&label=demo&up_message=live" alt="Demo status" />
+  </p>
+
   <p><strong>A women’s wellness app that adapts movement to the day a woman is actually having.</strong></p>
   <p><a href="https://sante-chi.vercel.app/">Try the live demo</a> · Women’s wellness · Mobile-first · No wearable required</p>
   <p><sub>For the intended experience, open the demo on a phone.</sub></p>
 </div>
+
+## Contents
+- [A changed day is not a failed day](#a-changed-day-is-not-a-failed-day)
+- [See the idea in under a minute](#see-the-idea-in-under-a-minute)
+- [What it feels like to use](#what-it-feels-like-to-use)
+- [Why AI belongs here](#why-ai-belongs-here)
+- [What is in the prototype](#what-is-in-the-prototype)
+- [What Santé deliberately does not claim](#what-santé-deliberately-does-not-claim)
+- [Privacy in plain language](#privacy-in-plain-language)
+- [Built with](#built-with)
+- [Running locally](#running-locally)
+- [The team](#the-team)
 
 ---
 
@@ -116,6 +136,30 @@ the request body.
 - **Adaptation:** OpenAI Responses API with GPT-5.6 Luna, structured output and tool calling
 - **Validation:** Zod contracts plus deterministic constraint checks
 - **Delivery:** Server-sent events for visible adaptation steps, deployed on Vercel
+
+## Running locally
+
+```bash
+git clone https://github.com/santeappbusiness/sante.git
+cd sante
+npm install
+cp .env.example .env.local
+```
+
+Fill in `.env.local`:
+
+| Variable | Where it's used |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Client-safe, Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client-safe, Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only — never expose to the client |
+| `OPENAI_API_KEY` | Server only — powers the adaptation engine |
+
+```bash
+npm run dev
+```
+
+Then open `http://localhost:3000`.
 
 ## The team
 

@@ -152,8 +152,8 @@ Fill in `.env.local`:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Client-safe, Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client-safe, Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only — never expose to the client |
-| `OPENAI_API_KEY` | Server only — powers the adaptation engine |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only never expose to the client |
+| `OPENAI_API_KEY` | Server only powers the adaptation engine |
 
 ```bash
 npm run dev

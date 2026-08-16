@@ -95,7 +95,7 @@ export default function SignIn() {
       </div>
 
       <div className="relative mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
-        <img src="/brand/sante-logo.png" alt="Santé" className="-ml-4 w-44" />
+        <img src="/brand/sante-mark.png" alt="Santé" className="-ml-4 w-44" />
 
         <h1 className="mt-5 font-display text-4xl leading-tight">
           {mode === "in" ? "Welcome back." : "Make a start."}

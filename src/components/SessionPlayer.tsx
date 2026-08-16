@@ -165,14 +165,25 @@ export default function SessionPlayer({
         )}
 
         <button
-          onClick={() => onToggleComplete(movement.id)}
+          onClick={() => {
+            onToggleComplete(movement.id);
+            /* Move on. Marking something done and then being left staring at
+               it is the moment a session stops feeling like a session. The
+               last movement stays put so nobody is thrown into the end. */
+            if (!isDone && !isLast) {
+              setTimeout(() => {
+                setLastSwap(null);
+                setIndex((i) => Math.min(plan.movements.length - 1, i + 1));
+              }, quiet ? 0 : 420);
+            }
+          }}
           aria-pressed={isDone}
           className={
             "relative mt-7 w-full rounded-2xl px-5 py-5 text-lg font-bold " +
             (isDone ? "bg-moss/35 text-ink" : "bg-coral text-coral-on")
           }
         >
-          {isDone ? "✓ Done" : "Mark done"}
+          {isDone ? "✓ Done" : isLast ? "Mark done" : "Done · next movement"}
         </button>
 
         {/* The mid-session escape hatch. Present on every movement, never

@@ -63,8 +63,10 @@ export function WorkoutCard({
           TINT[workout.intensity]
         }
       >
-        <div aria-hidden="true" className="absolute -right-8 -top-8 text-ink/10">
-          <Motif size={170} id={workout.id} />
+        {/* Bottom right, well clear of the type. Tucked into the top corner a
+            motif crops to something that reads as a broken glyph. */}
+        <div aria-hidden="true" className="absolute -bottom-10 -right-10 text-ink/10">
+          <Motif size={190} id={workout.id} />
         </div>
         <p className="relative font-mono text-xs uppercase tracking-[0.14em] text-slate">
           {workout.duration_minutes} min · {workout.intensity}

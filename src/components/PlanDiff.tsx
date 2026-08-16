@@ -27,9 +27,11 @@ function Figure({
         (adapted ? "bg-moss/25 morph-in morph-delay-2" : "bg-surface ring-1 ring-ink/10")
       }
     >
+      {/* The motif sits far enough out that only a soft arc shows. Clipped
+          close to the corner it read as a stray mark rather than as the motif. */}
       {adapted && (
-        <div aria-hidden="true" className="absolute -right-5 -top-5 text-moss/40">
-          <Flower size={80} />
+        <div aria-hidden="true" className="absolute -bottom-10 -right-10 text-moss/30">
+          <Flower size={130} id="diff" />
         </div>
       )}
 

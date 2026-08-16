@@ -39,7 +39,7 @@ export default function Progress() {
   return (
     <>
       <main className="pb-28 lg:pb-10 lg:pl-56">
-        <section className="relative overflow-hidden bg-moss/25 px-5 pb-12 pt-10">
+        <section className="relative overflow-hidden bg-moss/25 px-5 pb-16 pt-10">
           <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-16 text-moss/40">
             <Blob size={300} />
           </div>
@@ -49,18 +49,15 @@ export default function Progress() {
               Showing up counts, whatever shape it took.
             </p>
 
-            <div className="mt-8 flex items-end gap-5">
-              <p className="font-display text-7xl leading-none tabular-nums text-moss-deep sm:text-8xl">
+            {/* Figure and label share a baseline. Previously the number sat on
+                its own line height and drifted away from the words. */}
+            <div className="mt-8 flex flex-wrap items-baseline gap-x-5 gap-y-1">
+              <span className="font-display text-7xl leading-[0.85] tabular-nums text-moss-deep sm:text-8xl">
                 {honoured}
-              </p>
-              <div className="pb-2">
-                <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
-                  Days you honoured
-                </p>
-                <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
-                  your capacity
-                </p>
-              </div>
+              </span>
+              <span className="text-sm font-bold uppercase tracking-[0.13em] text-slate">
+                day{honoured === 1 ? "" : "s"} you honoured your capacity
+              </span>
             </div>
 
             <p className="mt-4 max-w-md text-sm text-ink-soft">
@@ -72,7 +69,7 @@ export default function Progress() {
 
         <div className="mx-auto max-w-3xl px-5">
           {empty ? (
-            <div className="-mt-6 rounded-[26px] bg-surface p-8 text-center shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-32px_rgba(47,58,51,0.35)]">
+            <div className="relative z-10 -mt-10 rounded-[26px] bg-surface p-8 text-center shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-32px_rgba(47,58,51,0.35)]">
               <span aria-hidden="true" className="mx-auto block w-fit text-moss">
                 <Sprig size={44} />
               </span>
@@ -90,9 +87,12 @@ export default function Progress() {
             </div>
           ) : (
             <>
-              <div className="-mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="relative z-10 -mt-10 grid gap-3 sm:grid-cols-2">
                 <div className="relative overflow-hidden rounded-[24px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_18px_44px_-30px_rgba(47,58,51,0.3)]">
-                  <div aria-hidden="true" className="absolute -right-4 -top-4 text-coral/25">
+                  {/* Clipped at the corner an arch shows only one leg, which
+                      reads as a stray stroke. Cropped at the bottom it still
+                      reads as an arch. */}
+                  <div aria-hidden="true" className="absolute -bottom-6 right-4 text-coral/25">
                     <Arch size={110} />
                   </div>
                   <p className="relative text-xs font-bold uppercase tracking-[0.13em] text-slate">

@@ -58,18 +58,19 @@ export default function Home() {
   const today = todayName();
   const todayPlanned = week.find((d) => d.day === today);
   const isRestDay = todayPlanned?.kind === "rest";
+  const peak = Math.max(1, ...week.map(planMinutes));
 
   return (
     <>
       <main className="pb-28 lg:pb-10 lg:pl-56">
         {/* Greeting and capacity, as one editorial block on a tinted ground. */}
-        <section className="relative overflow-hidden bg-lavender/30 px-5 pb-10 pt-10">
+        <section className="relative overflow-hidden bg-lavender/30 px-5 pb-16 pt-10">
           <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 text-lavender/60">
             <Blob size={320} />
           </div>
 
-          <div className="relative mx-auto max-w-3xl">
-            <img src="/brand/sante-logo.png" alt="Santé" className="-ml-3 w-32 sm:w-36 lg:hidden" />
+          <div className="relative mx-auto max-w-3xl lg:max-w-5xl">
+            <img src="/brand/sante-mark.png" alt="Santé" className="-ml-3 w-32 sm:w-36 lg:hidden" />
             <h1 className="mt-2 font-display text-4xl leading-tight sm:text-5xl">
               {greeting}, {name}
             </h1>
@@ -100,8 +101,14 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <div aria-hidden="true" className="text-lavender">
-                    <Flower size={140} />
+                  {/* The Bloom's empty seat. A dashed ring reads as something
+                      waiting to be filled in, where a large flat flower just
+                      read as a smudge next to the text. */}
+                  <div
+                    aria-hidden="true"
+                    className="flex h-[168px] w-[168px] shrink-0 items-center justify-center rounded-full border-2 border-dashed border-lavender text-lavender"
+                  >
+                    <Flower size={72} id="empty" />
                   </div>
                   <div className="mt-6 flex-1 sm:mt-0">
                     <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
@@ -125,9 +132,9 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="mx-auto max-w-3xl px-5">
+        <div className="mx-auto max-w-3xl px-5 lg:max-w-5xl">
           {/* Today, as a feature panel rather than a card in a stack. */}
-          <section className="-mt-6 rounded-[26px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-30px_rgba(47,58,51,0.3)]">
+          <section className="relative z-10 -mt-10 rounded-[26px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-30px_rgba(47,58,51,0.3)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
@@ -164,90 +171,98 @@ export default function Home() {
             </p>
           </section>
 
-          {/* Collections. Full-bleed feeling row, different shape to everything else. */}
-          <section className="mt-10">
-            <div className="flex items-baseline justify-between">
-              <h2 className="font-display text-2xl">For a day like this</h2>
-              <Link href="/explore" className="text-sm text-slate underline">
-                All collections
-              </Link>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {recommendWorkouts({
-                avoidTags: MAYA.avoid_tags,
-                preferredMinutes: MAYA.preferred_minutes,
-                calm,
-                limit: 3,
-              }).map((w, i) => (
-                <WorkoutCard key={w.id} workout={w} index={i} />
-              ))}
-            </div>
-          </section>
-
-          {/* The week, as rhythm rather than a table. */}
-          {week.length > 0 && (
-            <section className="relative mt-10 overflow-hidden rounded-[26px] bg-moss/20 p-6">
-              <div aria-hidden="true" className="absolute -bottom-3 -right-6 text-moss/40">
-                <Waves size={190} />
-              </div>
-              <div className="relative flex items-baseline justify-between">
-                <h2 className="font-display text-2xl">Your week</h2>
-                <Link href="/plan" className="text-sm text-slate underline">
-                  Open
+          {/* On a wide screen the offers and the week sit side by side, so the
+              page stops being one narrow column with dead space either side. */}
+          <div className="lg:grid lg:grid-cols-[1.55fr_1fr] lg:items-start lg:gap-8">
+            {/* Collections. Full-bleed feeling row, different shape to everything else. */}
+            <section className="mt-10">
+              <div className="flex items-baseline justify-between">
+                <h2 className="font-display text-2xl">For a day like this</h2>
+                <Link href="/explore" className="text-sm text-slate underline">
+                  All collections
                 </Link>
               </div>
 
-              <div className="relative mt-5 flex gap-1.5">
-                {week.map((d) => {
-                  const isToday = d.day === today;
-                  const height =
-                    d.kind === "rest" ? 8 : Math.max(14, Math.min(52, planMinutes(d)));
-                  return (
-                    <div key={d.day} className="flex flex-1 flex-col items-center gap-1.5">
-                      <div className="flex h-14 items-end">
-                        <div
-                          className={
-                            "w-full rounded-full " +
-                            (d.kind === "rest"
-                              ? "bg-ink/15"
-                              : isToday
-                              ? "bg-coral"
-                              : "bg-moss-deep/70")
-                          }
-                          style={{ height }}
-                        />
-                      </div>
-                      <span
-                        className={
-                          "text-[10px] " + (isToday ? "font-bold text-ink" : "text-slate")
-                        }
-                      >
-                        {d.day.slice(0, 1)}
-                      </span>
-                    </div>
-                  );
-                })}
+              <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                {recommendWorkouts({
+                  avoidTags: MAYA.avoid_tags,
+                  preferredMinutes: MAYA.preferred_minutes,
+                  calm,
+                  limit: 3,
+                }).map((w, i) => (
+                  <WorkoutCard key={w.id} workout={w} index={i} />
+                ))}
               </div>
-
-              <p className="relative mt-3 text-sm text-ink-soft">
-                Rest days are days, not gaps.
-              </p>
             </section>
-          )}
 
-          {history.length > 0 && (
-            <section className="mt-10">
-              <h2 className="font-display text-2xl">Your rhythm so far</h2>
-              <p className="mt-1 text-ink-soft">
-                {history.length} day{history.length === 1 ? "" : "s"} where you checked in and
-                adjusted rather than pushing through.
-              </p>
-              <Link href="/progress" className="mt-3 inline-block text-sm underline">
-                See progress
-              </Link>
-            </section>
-          )}
+            {/* The week, as rhythm rather than a table. */}
+            {week.length > 0 && (
+              <section className="relative mt-10 overflow-hidden rounded-[26px] bg-moss/20 p-6">
+                <div aria-hidden="true" className="absolute -bottom-3 -right-6 text-moss/40">
+                  <Waves size={190} />
+                </div>
+                <div className="relative flex items-baseline justify-between">
+                  <h2 className="font-display text-2xl">Your week</h2>
+                  <Link href="/plan" className="text-sm text-slate underline">
+                    Open
+                  </Link>
+                </div>
+
+                <div className="relative mt-5 flex gap-1.5">
+                  {week.map((d) => {
+                    const isToday = d.day === today;
+                    /* Scaled against the week's own busiest day, so the shape of
+                       the week reads even when every session is short. */
+                    const height =
+                      d.kind === "rest" ? 8 : Math.max(16, Math.round((planMinutes(d) / peak) * 56));
+                    return (
+                      <div key={d.day} className="flex flex-1 flex-col items-center gap-1.5">
+                        {/* w-full matters: without it this column collapses to zero
+                            width and the bar inside it disappears entirely. */}
+                        <div className="flex h-14 w-full items-end">
+                          <div
+                            className={
+                              "w-full rounded-full " +
+                              (d.kind === "rest"
+                                ? "bg-ink/15"
+                                : isToday
+                                ? "bg-coral"
+                                : "bg-moss-deep/70")
+                            }
+                            style={{ height }}
+                          />
+                        </div>
+                        <span
+                          className={
+                            "text-[10px] " + (isToday ? "font-bold text-ink" : "text-slate")
+                          }
+                        >
+                          {d.day.slice(0, 1)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className="relative mt-3 text-sm text-ink-soft">
+                  Rest days are days, not gaps.
+                </p>
+              </section>
+            )}
+
+            {history.length > 0 && (
+              <section className="mt-10">
+                <h2 className="font-display text-2xl">Your rhythm so far</h2>
+                <p className="mt-1 text-ink-soft">
+                  {history.length} day{history.length === 1 ? "" : "s"} where you checked in and
+                  adjusted rather than pushing through.
+                </p>
+                <Link href="/progress" className="mt-3 inline-block text-sm underline">
+                  See progress
+                </Link>
+              </section>
+            )}
+          </div>
         </div>
       </main>
 

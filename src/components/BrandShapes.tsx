@@ -50,7 +50,10 @@ export function Flower({
   size?: number;
   id?: string;
 }) {
-  const maskId = `flower-${id}-${size}`;
+  // The id ends up inside url(#...), so anything that is not safe in a
+  // fragment reference has to go. A space here silently breaks the mask and
+  // the flower renders as a solid square.
+  const maskId = `flower-${id.replace(/[^a-zA-Z0-9_-]/g, "-")}-${size}`;
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" aria-hidden="true" className={className}>
       <mask id={maskId}>

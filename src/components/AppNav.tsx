@@ -80,7 +80,7 @@ export default function AppNav() {
         className="fixed left-0 top-0 z-30 hidden h-screen w-56 flex-col border-r border-ink/10 bg-surface px-4 py-7 lg:flex"
       >
         <Link href="/home" className="mb-8 block px-2">
-          <img src="/brand/sante-logo.png" alt="Santé" className="w-28" />
+          <img src="/brand/sante-mark.png" alt="Santé" className="w-28" />
         </Link>
 
         <ul className="flex flex-1 flex-col gap-1">

@@ -53,7 +53,7 @@ export default function Plan() {
   return (
     <>
       <main className="pb-28 lg:pb-10 lg:pl-56">
-        <section className="relative overflow-hidden bg-moss/25 px-5 pb-11 pt-10">
+        <section className="relative overflow-hidden bg-moss/25 px-5 pb-14 pt-10">
           <div aria-hidden="true" className="pointer-events-none absolute -bottom-4 -right-8 text-moss/40">
             <Waves size={230} />
           </div>
@@ -85,7 +85,7 @@ export default function Plan() {
         </section>
 
         <div className="mx-auto max-w-3xl px-5">
-          <div className="-mt-5 grid gap-2">
+          <div className="relative z-10 -mt-8 grid gap-2">
             {week?.map((d) => {
               const isToday = d.day === today;
               const isEditing = editing === d.day;

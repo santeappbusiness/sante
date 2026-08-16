@@ -240,7 +240,7 @@ export default function Today() {
       <div className="mx-auto max-w-3xl">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <img src="/brand/sante-logo.png" alt="Santé" className="-ml-2 w-24 sm:w-28 lg:hidden" />
+          <img src="/brand/sante-mark.png" alt="Santé" className="-ml-2 w-24 sm:w-28 lg:hidden" />
           <h1 className="mt-1 font-display text-4xl leading-tight">Today</h1>
           <p className="mt-1 text-sm text-ink-soft">
             {who.name}, this is what you planned and what today can be.

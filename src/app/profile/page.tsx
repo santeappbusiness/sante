@@ -128,7 +128,7 @@ export default function ProfilePage() {
   return (
     <>
       <main className="pb-28 lg:pb-10 lg:pl-56">
-        <section className="relative overflow-hidden bg-lavender/30 px-5 pb-10 pt-10">
+        <section className="relative overflow-hidden bg-lavender/30 px-5 pb-14 pt-10">
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -right-16 -top-14 text-lavender/60"
@@ -137,7 +137,7 @@ export default function ProfilePage() {
           </div>
           <div className="relative mx-auto max-w-3xl">
             <img
-              src="/brand/sante-logo.png"
+              src="/brand/sante-mark.png"
               alt="Santé"
               className="-ml-3 w-32 sm:w-36 lg:hidden"
             />

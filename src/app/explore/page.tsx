@@ -30,7 +30,7 @@ export default function Explore() {
   return (
     <>
       <main className="pb-28 lg:pb-10 lg:pl-56">
-        <section className="relative overflow-hidden bg-moss/20 px-5 pb-10 pt-10">
+        <section className="relative overflow-hidden bg-moss/20 px-5 pb-14 pt-10">
           <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 text-moss/40">
             <Blob size={300} />
           </div>
@@ -74,7 +74,7 @@ export default function Explore() {
             </section>
           ) : (
             <>
-              <section className="-mt-4">
+              <section className="relative z-10 -mt-8">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {featured.slice(0, 2).map((w, i) => (
                     <WorkoutCard key={w.id} workout={w} size="featured" index={i} />

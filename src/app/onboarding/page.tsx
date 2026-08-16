@@ -85,7 +85,7 @@ export default function Onboarding() {
 
       {step === 0 && (
         <div>
-          <img src="/brand/sante-logo.png" alt="Santé" className="-ml-4 mb-5 w-40" />
+          <img src="/brand/sante-mark.png" alt="Santé" className="-ml-4 mb-5 w-40" />
           <h1 className="text-4xl leading-tight">What would you like from this?</h1>
           <div className="mt-6 grid gap-2">
             {GOALS.map((g) => (

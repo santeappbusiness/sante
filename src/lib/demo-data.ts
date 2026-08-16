@@ -246,6 +246,26 @@ const LIBRARY: Movement[] = [
 
 MOVEMENTS.push(...LIBRARY);
 
+/**
+ * Every tag the catalogue actually uses.
+ *
+ * Derived rather than hand-written, so it cannot drift when a movement is
+ * added.
+ */
+export const MOVEMENT_TAGS: readonly string[] = [
+  ...new Set(MOVEMENTS.flatMap((m) => m.tags)),
+];
+
+/**
+ * The only tags the "anything else going on today" answers can produce.
+ *
+ * Deliberately much narrower than the catalogue vocabulary. Symptoms map to
+ * exactly these two, so accepting anything wider means accepting tags the
+ * feature cannot generate, and ten of those in one request body exclude the
+ * entire catalogue. Two tags cannot empty a pool, whatever is sent.
+ */
+export const CONTEXT_TAGS: readonly string[] = ["jumping", "floor_work"];
+
 /** Where the question mark in a session goes. Santé does not host video, so it
  *  sends people somewhere they can actually watch the movement done properly. */
 export function howToUrl(m: Movement): string {

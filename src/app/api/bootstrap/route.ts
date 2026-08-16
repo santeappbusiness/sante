@@ -21,11 +21,15 @@ export async function POST(req: NextRequest) {
   }
 
   const profileId = user.id;
+  /* Empty rather than "there" when we were not given a name. "there" is a piece
+     of greeting copy, and stored as a display_name it came back out as "there,
+     this is what you planned", which reads like a bug because it is one. The
+     screens that greet someone now drop the name when there is not one. */
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
   const name =
-    (typeof meta.full_name === "string" && meta.full_name.split(" ")[0]) ||
-    (typeof meta.name === "string" && meta.name.split(" ")[0]) ||
-    "there";
+    (typeof meta.full_name === "string" && meta.full_name.trim().split(" ")[0]) ||
+    (typeof meta.name === "string" && meta.name.trim().split(" ")[0]) ||
+    "";
 
   const { data: before } = await admin
     .from("profiles")

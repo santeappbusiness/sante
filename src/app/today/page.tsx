@@ -101,8 +101,11 @@ export default function Today() {
         .from("profiles")
         .select("display_name, nd_mode")
         .maybeSingle();
-      if (row?.display_name) {
-        setWho({ name: row.display_name, isDemo: Boolean(user.is_anonymous) });
+      /* Checked separately. Gating both on a truthy name meant someone who
+         never gave us one silently kept Maya's identity and lost their own
+         calm mode setting. */
+      if (row) {
+        setWho({ name: row.display_name ?? "", isDemo: Boolean(user.is_anonymous) });
         setNd(Boolean(row.nd_mode));
       }
     })();
@@ -255,8 +258,11 @@ export default function Today() {
         <div>
           <img src="/brand/sante-mark.png" alt="Santé" className="-ml-2 w-24 sm:w-28 lg:hidden" />
           <h1 className="mt-1 font-display text-4xl leading-tight">Today</h1>
+          {/* The name is dropped rather than filled in when we do not have one.
+              A greeting that opens on a placeholder is worse than one that
+              opens on the sentence. */}
           <p className="mt-1 text-sm text-ink-soft">
-            {who.name}, this is what you planned and what today can be.
+            {who.name ? `${who.name}, this` : "This"} is what you planned and what today can be.
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">

@@ -1,8 +1,14 @@
 import { NextRequest } from "next/server";
-import { readinessCheckinSchema, type AgentEvent } from "@/types/domain";
+import {
+  feedbackVerdictSchema,
+  readinessCheckinSchema,
+  type AgentEvent,
+  type FeedbackVerdict,
+  type UserProfile,
+} from "@/types/domain";
 import { allowedMovements, computeReadiness } from "@/lib/readiness";
 import { interpretRequest, LUNA_MODEL, runAdaptation } from "@/lib/luna";
-import { MAYA, TODAYS_PLAN } from "@/lib/demo-data";
+import { CONTEXT_TAGS, MAYA, TODAYS_PLAN } from "@/lib/demo-data";
 import { loadProfile, resolveUser, saveAdaptation, saveCheckin } from "@/lib/persist";
 
 export const runtime = "nodejs";
@@ -24,6 +30,13 @@ export const maxDuration = 60;
 const CALLS = new Map<string, { count: number; first: number }>();
 const MAX_PER_SESSION = 10;
 const WINDOW_MS = 60 * 60 * 1000;
+
+/* Bounds on the two things a caller can put in the body that are not numbers.
+   The free-text box on screen holds a sentence and the feedback list is at most
+   a handful of past sessions; neither needs to be open-ended, and both end up
+   in front of a model. */
+const MAX_REQUEST_CHARS = 280;
+const MAX_FEEDBACK_ITEMS = 10;
 
 function overLimit(key: string) {
   const now = Date.now();
@@ -77,6 +90,26 @@ function applyFit(
   return next;
 }
 
+/**
+ * Add exclusions that came from what someone typed, unless they would leave
+ * nothing to build with.
+ *
+ * "Nothing seated, nothing standing, nothing on the floor" is a reasonable
+ * sentence and an impossible session: those three tags between them cover the
+ * whole catalogue. Honouring it literally produced an empty plan. The tags a
+ * person saved on their profile and the ones the safety rules added stay
+ * untouched; only this request's are dropped, and only when keeping them would
+ * mean handing back nothing at all.
+ */
+function widenIfEmptied(result: ReturnType<typeof computeReadiness>, add: string[]): string[] {
+  const tags = [...result.excluded_tags];
+  for (const t of add) if (!tags.includes(t)) tags.push(t);
+  if (tags.length === result.excluded_tags.length) return result.excluded_tags;
+
+  const wouldAllow = allowedMovements({ ...result, excluded_tags: tags });
+  return wouldAllow.length > 0 ? tags : result.excluded_tags;
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = readinessCheckinSchema.safeParse(body?.checkin);
@@ -102,15 +135,35 @@ export async function POST(req: NextRequest) {
      reach the model as instructions. */
   const fit: string[] = Array.isArray(body?.fit) ? body.fit : [];
 
-  /* Free text, if they typed instead of tapping. */
-  const request: string = typeof body?.request === "string" ? body.request : "";
+  /* Free text, if they typed instead of tapping. Trimmed and capped before it
+     goes anywhere near a model: the box on screen holds a sentence, and the
+     request body is not the box. */
+  const request: string =
+    typeof body?.request === "string" ? body.request.trim().slice(0, MAX_REQUEST_CHARS) : "";
 
   /* Movement tags derived from anything else they told us about today. They
      arrive as tags, not as symptoms or labels, so nothing downstream can treat
-     them as clinical information. */
+     them as clinical information.
+
+     Filtered against the two tags this feature can actually produce, not
+     against the catalogue vocabulary. These go straight into excluded_tags,
+     and ten valid catalogue tags in one request body exclude every movement
+     there is, which left the fallback handing back a nought minute session. */
   const contextTags: string[] = Array.isArray(body?.context_tags)
-    ? body.context_tags.filter((t: unknown) => typeof t === "string")
+    ? body.context_tags.filter(
+        (t: unknown): t is string => typeof t === "string" && CONTEXT_TAGS.includes(t)
+      )
     : [];
+
+  /* How recent sessions felt. This is the one client-supplied value that
+     reaches the model as content rather than as a constraint, so it is parsed
+     against the enum instead of trusted: anything that is not one of the three
+     verdicts is dropped rather than forwarded into Luna's context. */
+  const recentFeedback: FeedbackVerdict[] = (
+    Array.isArray(body?.recent_feedback) ? body.recent_feedback : []
+  )
+    .filter((v: unknown): v is FeedbackVerdict => feedbackVerdictSchema.safeParse(v).success)
+    .slice(0, MAX_FEEDBACK_ITEMS);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -138,14 +191,21 @@ export async function POST(req: NextRequest) {
         /* Adapt for whoever this actually is. Falling back to the demo persona
            keeps the app working for a visitor we cannot identify. */
         const stored = profileId ? await loadProfile(profileId) : null;
-        const profile = stored
+        /* Built field by field rather than spread over MAYA. Spreading left a
+           signed-in person carrying Maya's id, her is_demo flag, and the
+           paragraph she wrote about herself, none of which are theirs. The
+           fields nobody stores fall back to the schema's own defaults, not to
+           a fictional person's. */
+        const profile: UserProfile = stored
           ? {
-              ...MAYA,
-              display_name: stored.display_name ?? MAYA.display_name,
-              goal: stored.goal ?? MAYA.goal,
-              preferred_minutes: stored.preferred_minutes ?? MAYA.preferred_minutes,
-              avoid_tags: stored.avoid_tags ?? MAYA.avoid_tags,
-              neurodivergent_mode: stored.nd_mode ?? MAYA.neurodivergent_mode,
+              id: profileId!,
+              display_name: stored.display_name ?? "",
+              goal: stored.goal ?? "",
+              preferred_minutes: stored.preferred_minutes ?? 30,
+              avoid_tags: stored.avoid_tags ?? [],
+              neurodivergent_mode: stored.nd_mode ?? false,
+              context: stored.context ?? null,
+              is_demo: false,
             }
           : MAYA;
 
@@ -171,11 +231,9 @@ export async function POST(req: NextRequest) {
               label: "Read what you asked for",
               detail: interpreted.summary || undefined,
             });
-            const tags = [...result.excluded_tags];
-            for (const t of interpreted.avoid_tags) if (!tags.includes(t)) tags.push(t);
             result = {
               ...result,
-              excluded_tags: tags,
+              excluded_tags: widenIfEmptied(result, interpreted.avoid_tags),
               target_minutes: interpreted.minutes
                 ? Math.min(result.target_minutes, interpreted.minutes)
                 : result.target_minutes,
@@ -211,7 +269,6 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        const recentFeedback = Array.isArray(body?.recent_feedback) ? body.recent_feedback : [];
         const recentFeedbackCount = recentFeedback.length;
 
         const outcome = await runAdaptation({

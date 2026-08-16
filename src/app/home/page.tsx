@@ -48,8 +48,10 @@ export default function Home() {
 
       const sb = getSupabase();
       if (!sb) return;
+      /* A row with no name still replaces Maya's. Keeping her name because
+         someone left theirs blank greets a real person as a fictional one. */
       const { data } = await sb.from("profiles").select("display_name").maybeSingle();
-      if (data?.display_name) setName(data.display_name);
+      if (data) setName(data.display_name ?? "");
     })();
   }, []);
 
@@ -72,7 +74,7 @@ export default function Home() {
           <div className="relative mx-auto max-w-3xl lg:max-w-5xl">
             <img src="/brand/sante-mark.png" alt="Santé" className="-ml-3 w-32 sm:w-36 lg:hidden" />
             <h1 className="mt-2 font-display text-4xl leading-tight sm:text-5xl">
-              {greeting}, {name}
+              {name ? `${greeting}, ${name}` : greeting}
             </h1>
 
             <div className="mt-8 sm:flex sm:items-center sm:gap-10">

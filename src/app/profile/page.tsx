@@ -141,8 +141,10 @@ export default function ProfilePage() {
               alt="Santé"
               className="-ml-3 w-32 sm:w-36 lg:hidden"
             />
+            {/* Headed "Your profile" when there is no name, rather than an
+                empty h1 sitting above the settings. */}
             <h1 className="mt-2 font-display text-4xl leading-tight sm:text-5xl">
-              {profile.display_name}
+              {profile.display_name || "Your profile"}
             </h1>
             <p className="mt-1 font-mono text-sm text-slate">
               {email ?? (isDemo ? "Demo account · nothing to sign up for" : "")}

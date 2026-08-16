@@ -332,16 +332,56 @@ export async function runAdaptation({
   return finishWithFallback(result, plan);
 }
 
+/**
+ * The reasons we write ourselves when the model did not.
+ *
+ * These used to assert that the session had been shortened and was gentle, on
+ * every path, including the days it kept the full length at the intensity the
+ * person was allowed. Santé's whole claim is that it explains what actually
+ * changed, so copy that describes a change that did not happen is worse than
+ * no copy at all. Each line is now checked against the plan it describes.
+ */
 function finishWithFallback(result: ReadinessResult, plan: DailyPlan): RunOutcome {
   const adapted = fallbackPlan(result, plan);
-  return {
-    adapted,
-    reasons: [
-      `${capitalise(result.drivers[0] ?? "you checked in")}, so we shortened today's session.`,
-      `We kept ${adapted.movements.length} movement${adapted.movements.length === 1 ? "" : "s"} at a gentle pace.`,
-    ],
-    used_fallback: true,
-  };
+  const reasons: string[] = [];
+
+  const rank = { low: 1, moderate: 2, high: 3 } as const;
+  const shorter = adapted.total_minutes < plan.total_minutes;
+  const fewer = adapted.movements.length < plan.movements.length;
+  /* Lower, not merely different. A day that permits more than the plan asked
+     for is not a day we should describe as a change in intensity. */
+  const easier = rank[adapted.intensity] < rank[plan.intensity];
+  /* Lead with something they told us today rather than with a setting they
+     turned on weeks ago. Calm mode gets its own sentence further down, so
+     opening on it said the same thing twice. */
+  const opener = capitalise(
+    result.drivers.find((d) => d.startsWith("you reported")) ?? result.drivers[0] ?? "you checked in"
+  );
+
+  if (shorter && fewer) {
+    reasons.push(
+      `${opener}, so today is ${adapted.total_minutes} minutes across ${adapted.movements.length} movement${adapted.movements.length === 1 ? "" : "s"} instead of ${plan.total_minutes} across ${plan.movements.length}.`
+    );
+  } else if (shorter) {
+    reasons.push(`${opener}, so today is ${adapted.total_minutes} minutes rather than ${plan.total_minutes}.`);
+  } else if (fewer) {
+    reasons.push(
+      `${opener}, so today keeps ${adapted.movements.length} movement${adapted.movements.length === 1 ? "" : "s"} rather than ${plan.movements.length}.`
+    );
+  } else {
+    reasons.push(`${opener}, so today stays as you planned it.`);
+  }
+
+  if (easier) {
+    reasons.push(`The intensity is ${adapted.intensity} rather than ${plan.intensity}.`);
+  }
+  if (result.prefer_quiet) {
+    reasons.push("You use calm mode, so these are the quieter options.");
+  }
+
+  reasons.push("Santé built this with its own rules rather than the assistant.");
+
+  return { adapted, reasons, used_fallback: true };
 }
 
 function capitalise(s: string) {

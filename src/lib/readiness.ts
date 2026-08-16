@@ -109,7 +109,11 @@ export function computeReadiness(
   if (profile.neurodivergent_mode) {
     max_movements = Math.min(max_movements, 3);
     if (!excluded_tags.includes("jumping")) excluded_tags.push("jumping");
-    drivers.push("you use calm mode, so this keeps to fewer, quieter movements");
+    /* A fragment, like every other driver. Written as a full clause it read as
+       "you use calm mode, so this keeps to fewer movements, so today is 17
+        minutes", because callers join drivers into a sentence with their own
+       "so". */
+    drivers.push("you use calm mode");
   }
 
   /* Say so when someone reports a good day. Without this the only sentence the
@@ -209,11 +213,32 @@ export function fallbackPlan(result: ReadinessResult, original: DailyPlan): Dail
     minutes = pool[0].minutes;
   }
 
+  /* An unblocked day that produces no movements is not a session, and shipping
+     it means a person sees "0 min" under a heading that promises a plan. It
+     happens when the excluded tags between them rule out the whole catalogue.
+     Callers cannot reach this with valid input any more, and if that stops
+     being true this should surface rather than render. */
+  if (picked.length === 0) {
+    throw new Error(
+      `no movement satisfies today's constraints (max_intensity=${result.max_intensity}, excluded=${result.excluded_tags.join(",") || "none"})`
+    );
+  }
+
+  /* What was picked, not what was permitted. Reporting the ceiling meant a
+     fallback of walking and stretches described itself as "high" whenever the
+     day allowed high, so the plan a person read did not match the plan they
+     were given. */
+  const rank = { low: 1, moderate: 2, high: 3 } as const;
+  const intensity = picked.reduce<Movement["intensity"]>(
+    (worst, m) => (rank[m.intensity] > rank[worst] ? m.intensity : worst),
+    "low"
+  );
+
   return {
     id: "adapted-fallback",
     title: "Adapted for today",
     total_minutes: minutes,
-    intensity: result.max_intensity,
+    intensity,
     movements: picked,
   };
 }

@@ -394,7 +394,10 @@ export default function Landing() {
               professional. Maya is a fictional demo user.
             </p>
           </div>
-          <Link href="/signin" className="text-sm text-ink underline underline-offset-4">
+          <Link
+            href="/signin"
+            className="-my-3 py-3 text-sm text-ink underline underline-offset-4"
+          >
             Create an account
           </Link>
         </div>

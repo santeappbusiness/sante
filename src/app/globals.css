@@ -114,6 +114,15 @@
 }
 .sante-unfold { animation: sante-unfold 1200ms cubic-bezier(0.22, 0.75, 0.25, 1) both; }
 
+/* Finishing a movement. One soft settle, no confetti and no fanfare: the
+   reward for finishing something on a hard day should be quiet. */
+@keyframes sante-settled {
+  0% { transform: none; box-shadow: 0 0 0 0 rgba(78, 108, 65, 0); }
+  40% { transform: scale(0.992); box-shadow: 0 0 0 4px rgba(78, 108, 65, 0.18); }
+  100% { transform: none; box-shadow: 0 0 0 0 rgba(78, 108, 65, 0); }
+}
+.sante-settled { animation: sante-settled 480ms cubic-bezier(0.3, 0.7, 0.3, 1) both; }
+
 /* A slow breath, for the one place a person is genuinely waiting. */
 @keyframes sante-breathe {
   0%, 100% { transform: scale(1); opacity: 0.85; }
@@ -159,7 +168,8 @@ a[href]:active {
 [data-nd="on"] .bloom-open,
 [data-nd="on"] .figure-in,
 [data-nd="on"] .sante-breathe,
-[data-nd="on"] .sante-unfold {
+[data-nd="on"] .sante-unfold,
+[data-nd="on"] .sante-settled {
   animation: none;
 }
 

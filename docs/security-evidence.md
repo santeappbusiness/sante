@@ -1,4 +1,4 @@
-##Security evidence 
+## Security evidence 
 
 RLS aka Row level Security also known as user isolation basically it proves one user cannot see or touch 
 another user data . We tested it as an attacker would from where you might wonder from the live site where 
@@ -12,7 +12,7 @@ for the next step , we tried to insert a check-in while setting the redflag , gu
 Then we tried to flip the flag is_demo to basically escape the demo status 
 and guess what happened ? it REJECTED AGAN 403
 
-Secrets: not in the browser bundle
+## Secrets: not in the browser bundle
 now the above thingy proves that dangerous keys never reached the visitor's browser.
 now the OPEN AI KEY and Service role key both are named without any sus prefix aka public, 
 so next.js keeps them server-side.
@@ -20,7 +20,7 @@ we searched the live page source for the word service_role and got FALSE which m
 now the question arises why it matters ? 
 the service role key ignores EVERY RLS rule and we just proved it works . now if it get leaked
 into the browser all of the above will be meaningless
-Safety gate: fails closed (worth adding it's today's win)
+## Safety gate: fails closed (worth adding it's today's win)
 This proves a red flag genuinely stops a session, and stops it safely.
 On the live site, ticking chest pain gives the pause screen and no workout.
 A blocked result now carries zero minutes and zero movements, so if any future code forgets to check the flag,
@@ -40,7 +40,7 @@ So if either of the check failed? ask the model once more if it fails again then
 now comes the strongest part : 
 the final movements are not taken from the model's words at all , the model runs ids like mv_walk, and our code looks each ids up in our own catalogue and rebuild the movement from there . So even if the model tried to invent a movement or rewrites the instructions it legit cannot so thats what makes the model true by construction , not hope. 
 
-Errors: failures fall back without leaking
+## Errors: failures fall back without leaking
 now this part is about what happens when things break . The model can time out , the network can drop . the key aka API could go missing or the output fail the validation twice. in every one of those cases the user will get either a proper backup plan or an honest answer aka "something went wrong" 
 now you all must be wondering why does this part even matters? 
 it basically proves that the app will work even if AI switched off. Safety and a usable session dont depends on the model answering and thats basically the whole crux of the product. 

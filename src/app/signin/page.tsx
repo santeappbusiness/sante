@@ -49,7 +49,13 @@ export default function SignIn() {
       const { data, error } = await sb.auth.signUp({
         email,
         password,
-        options: { data: { full_name: name } },
+        options: {
+          data: { full_name: name },
+          /* Where the confirmation link comes back to. Without this it lands on
+             the marketing page as an anonymous visitor and the person has to
+             work out that they still need to sign in. */
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
       if (error) {
         setError(friendlyError(error.message));
@@ -59,7 +65,9 @@ export default function SignIn() {
       /* Some projects require email confirmation, some do not. Handle both
          rather than assuming and stranding people on a blank screen. */
       if (!data.session) {
-        setNotice("Check your email to confirm the account, then sign in.");
+        setNotice(
+          "Check your email. The link in it opens Santé with you already signed in."
+        );
         setMode("in");
         setBusy(false);
         return;

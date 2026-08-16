@@ -52,7 +52,7 @@ export default function Progress() {
             {/* Figure and label share a baseline. Previously the number sat on
                 its own line height and drifted away from the words. */}
             <div className="mt-8 flex flex-wrap items-baseline gap-x-5 gap-y-1">
-              <span className="font-display text-7xl leading-[0.85] tabular-nums text-moss-deep sm:text-8xl">
+              <span className="figure-in font-display text-7xl leading-[0.85] tabular-nums text-moss-deep sm:text-8xl">
                 {honoured}
               </span>
               <span className="text-sm font-bold uppercase tracking-[0.13em] text-slate">
@@ -87,7 +87,7 @@ export default function Progress() {
             </div>
           ) : (
             <>
-              <div className="relative z-10 -mt-10 grid gap-3 sm:grid-cols-2">
+              <div className="rise relative z-10 -mt-10 grid gap-3 sm:grid-cols-2">
                 <div className="relative overflow-hidden rounded-[24px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_18px_44px_-30px_rgba(47,58,51,0.3)]">
                   {/* Clipped at the corner an arch shows only one leg, which
                       reads as a stray stroke. Cropped at the bottom it still
@@ -116,7 +116,7 @@ export default function Progress() {
 
               {/* Fortnight rhythm. Bars, because a line chart of six points
                   pretends to a trend that is not there. */}
-              <section className="mt-10">
+              <section className="rise rise-1 mt-10">
                 <h2 className="font-display text-2xl">Your last two weeks</h2>
                 <div className="mt-4 rounded-[24px] bg-surface p-6 ring-1 ring-ink/10">
                   <div className="flex items-end gap-1.5" style={{ height: 120 }}>

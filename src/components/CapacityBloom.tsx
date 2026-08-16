@@ -87,7 +87,10 @@ export default function CapacityBloom({
         viewBox="0 0 200 200"
         role="img"
         aria-label={`Today's capacity: ${label}. Energy ${values.energy} of 5, comfort ${values.comfort} of 5, mood ${values.mood} of 5, sensory calm ${values.calm} of 5.`}
-        className="overflow-visible"
+        /* Grows into place rather than appearing. This is the emotional centre
+           of the product and the moment a person's answers become a shape, so
+           it is the one thing worth animating properly. Off in calm mode. */
+        className="bloom-open overflow-visible"
       >
         {PETALS.map(({ key, angle }) => {
           const v = Math.max(1, Math.min(5, values[key]));

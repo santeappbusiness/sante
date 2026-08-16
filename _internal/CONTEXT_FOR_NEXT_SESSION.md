@@ -257,7 +257,17 @@ Verified live on `sante-chi.vercel.app` as of the last session:
 
 ## 6. Open work, in priority order
 
-### 6.1 URGENT: the email confirmation flow is broken and ugly
+### 6.1 DONE: the email confirmation flow
+
+The callback is built and the templates are written. **The dashboard steps are
+not done and cannot be done from here**: see `_internal/email-templates/README.md`
+for exactly what to paste where, including the redirect URLs, which the flow
+will not work without.
+
+What follows is the original write-up, kept because it explains why the code
+looks the way it does.
+
+<details><summary>Original</summary>
 
 Two separate problems, both blocking a judge who tries to make a real account.
 
@@ -315,7 +325,15 @@ Implementation sketch:
 
 Test the whole path end to end with a real address before calling it done.
 
-### 6.2 URGENT: a real welcome and onboarding
+</details>
+
+### 6.2 DONE: a real welcome and onboarding
+
+Seven screens, a Calm mode screen with a live preview, a closing screen that
+builds a real plan from the answers, and a once-only welcome for demo visitors
+in `src/components/DemoWelcome.tsx`.
+
+<details><summary>Original</summary>
 
 `src/app/onboarding/page.tsx` exists but it is thin: five steps, plain type, no
 brand shapes, no motion, no sense of arrival, and it only runs for
@@ -347,7 +365,11 @@ What it needs to become:
   RLS actually permits that for a freshly confirmed user, because a silent
   failure here loses everything they just told us.
 
-### 6.3 UI and UX bugs the user has already reported
+</details>
+
+### 6.3 DONE: UI and UX bugs
+
+<details><summary>Original</summary>
 
 - **Explore cards are washed out.** `WorkoutCard`'s featured tint is
   `bg-moss/20` (see `TINT` in `src/components/WorkoutCard.tsx`) and it sits on
@@ -363,7 +385,16 @@ What it needs to become:
   `src/app` for a missing `relative z-10`, and give the band above enough bottom
   padding that the card has somewhere to land.
 
-### 6.4 Animation and motion
+</details>
+
+### 6.4 DONE: animation and motion
+
+The vocabulary now covers page entrances, the Bloom opening, figures, presses
+and focus. Everything is guarded twice, by calm mode and by reduced motion, and
+every animated class has a visible end state under both guards so switching
+motion off never hides content.
+
+<details><summary>Original</summary>
 
 There is a small motion vocabulary in `src/app/globals.css`: `sante-rise`
 (`morph-in`), `sante-sheet`, `sante-nav-settle`, `sante-nav-bloom`. It is used
@@ -390,6 +421,8 @@ Extend it deliberately, not decoratively:
 - Nothing bouncy, nothing longer than about 500ms, nothing that delays a person
   from acting. This is an app for low-energy days. Motion should feel like
   settling, not performing.
+
+</details>
 
 ### 6.5 Code review and hardening
 

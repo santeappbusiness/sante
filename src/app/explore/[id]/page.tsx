@@ -30,7 +30,7 @@ export default function CollectionPage() {
   return (
     <>
       <main className="pb-28 lg:pb-10 lg:pl-56">
-        <section className="relative overflow-hidden bg-lavender/30 px-5 pb-10 pt-10">
+        <section className="relative overflow-hidden bg-lavender/30 px-5 pb-14 pt-10">
           <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-14 text-lavender/60">
             <Blob size={280} />
           </div>
@@ -49,7 +49,7 @@ export default function CollectionPage() {
         </section>
 
         <div className="mx-auto max-w-4xl px-5">
-          <div className="-mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="relative z-10 -mt-8 grid gap-3 sm:grid-cols-2">
             {workouts.map((w, i) => (
               <WorkoutCard key={w.id} workout={w} size={i === 0 ? "featured" : "default"} index={i} />
             ))}

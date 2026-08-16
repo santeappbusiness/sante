@@ -12,11 +12,23 @@ import { Arch, Asterisk, Flower, Sprig, Waves } from "./BrandShapes";
 
 const MOTIFS = [Flower, Waves, Asterisk, Arch, Sprig];
 
-const TINT: Record<string, string> = {
-  low: "bg-moss/20",
-  moderate: "bg-lavender/35",
-  high: "bg-coral/15",
+/**
+ * Intensity tints for the featured card.
+ *
+ * These sit on a solid surface rather than being transparent washes. A
+ * moss/20 card landing on the moss/20 Explore band disappeared into it, which
+ * is what made the featured row read as empty space with words in it. The tint
+ * is now an accent bar and a motif colour; the card itself is always opaque and
+ * always carries a shadow, so it lifts off whatever ground it is dropped on.
+ */
+const TINT: Record<string, { accent: string; motif: string }> = {
+  low: { accent: "bg-moss-deep", motif: "text-moss-deep/25" },
+  moderate: { accent: "bg-lavender", motif: "text-lavender" },
+  high: { accent: "bg-coral", motif: "text-coral/30" },
 };
+
+const CARD_LIFT =
+  "shadow-[0_1px_2px_rgba(47,58,51,0.05),0_22px_50px_-32px_rgba(47,58,51,0.45)]";
 
 export function WorkoutCard({
   workout,
@@ -38,8 +50,8 @@ export function WorkoutCard({
         <span
           aria-hidden="true"
           className={
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl " +
-            TINT[workout.intensity]
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-canvas " +
+            (TINT[workout.intensity] ?? TINT.low).motif
           }
         >
           <Motif size={22} id={workout.id} />
@@ -55,17 +67,21 @@ export function WorkoutCard({
   }
 
   if (size === "featured") {
+    const tint = TINT[workout.intensity] ?? TINT.low;
     return (
       <Link
         href={`/workout/${workout.id}`}
         className={
-          "group relative block overflow-hidden rounded-[26px] p-7 sm:p-9 " +
-          TINT[workout.intensity]
+          "group relative block overflow-hidden rounded-[26px] bg-surface p-7 ring-1 ring-ink/10 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 sm:p-9 " +
+          CARD_LIFT
         }
       >
+        {/* The colour lives in a bar and the motif rather than in the fill, so
+            the card stays readable on a tinted band. */}
+        <span aria-hidden="true" className={"absolute inset-y-0 left-0 w-1.5 " + tint.accent} />
         {/* Bottom right, well clear of the type. Tucked into the top corner a
             motif crops to something that reads as a broken glyph. */}
-        <div aria-hidden="true" className="absolute -bottom-10 -right-10 text-ink/10">
+        <div aria-hidden="true" className={"absolute -bottom-10 -right-10 " + tint.motif}>
           <Motif size={190} id={workout.id} />
         </div>
         <p className="relative font-mono text-xs uppercase tracking-[0.14em] text-slate">
@@ -86,8 +102,15 @@ export function WorkoutCard({
   return (
     <Link
       href={`/workout/${workout.id}`}
-      className="group relative block overflow-hidden rounded-[22px] bg-surface p-5 ring-1 ring-ink/10 transition-shadow hover:shadow-[0_18px_44px_-30px_rgba(47,58,51,0.4)]"
+      className={
+        "group relative block overflow-hidden rounded-[22px] bg-surface p-5 ring-1 ring-ink/10 transition-[transform,box-shadow] duration-300 hover:-translate-y-0.5 " +
+        CARD_LIFT
+      }
     >
+      <span
+        aria-hidden="true"
+        className={"absolute inset-y-0 left-0 w-1 " + (TINT[workout.intensity] ?? TINT.low).accent}
+      />
       <div className="flex items-start justify-between gap-3">
         <p className="font-mono text-xs uppercase tracking-[0.13em] text-slate">
           {workout.duration_minutes} min · {workout.intensity}

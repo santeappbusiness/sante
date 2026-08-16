@@ -9,6 +9,7 @@ import { loadWeek, planMinutes, todayName, type PlannedDay } from "@/lib/week";
 import CapacityBloom, { capacityLabel, toBloom } from "@/components/CapacityBloom";
 import CheckInSheet from "@/components/CheckInSheet";
 import CheckInPrompt from "@/components/CheckInPrompt";
+import DemoWelcome from "@/components/DemoWelcome";
 import { readCalm } from "@/components/CalmMode";
 import { recommendWorkouts } from "@/lib/workouts";
 import { WorkoutCard } from "@/components/WorkoutCard";
@@ -33,6 +34,7 @@ export default function Home() {
   const [week, setWeek] = useState<PlannedDay[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [calm, setCalm] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -50,6 +52,9 @@ export default function Home() {
       if (!sb) return;
       /* A row with no name still replaces Maya's. Keeping her name because
          someone left theirs blank greets a real person as a fictional one. */
+      const { data: auth } = await sb.auth.getSession();
+      setIsDemo(Boolean(auth.session?.user?.is_anonymous));
+
       const { data } = await sb.from("profiles").select("display_name").maybeSingle();
       if (data) setName(data.display_name ?? "");
     })();
@@ -136,7 +141,7 @@ export default function Home() {
 
         <div className="mx-auto max-w-3xl px-5 lg:max-w-5xl">
           {/* Today, as a feature panel rather than a card in a stack. */}
-          <section className="relative z-10 -mt-10 rounded-[26px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-30px_rgba(47,58,51,0.3)]">
+          <section className="rise relative z-10 -mt-10 rounded-[26px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-30px_rgba(47,58,51,0.3)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
@@ -177,7 +182,7 @@ export default function Home() {
               page stops being one narrow column with dead space either side. */}
           <div className="lg:grid lg:grid-cols-[1.55fr_1fr] lg:items-start lg:gap-8">
             {/* Collections. Full-bleed feeling row, different shape to everything else. */}
-            <section className="mt-10">
+            <section className="rise rise-1 mt-10">
               <div className="flex items-baseline justify-between">
                 <h2 className="font-display text-2xl">For a day like this</h2>
                 <Link href="/explore" className="text-sm text-slate underline">
@@ -199,7 +204,7 @@ export default function Home() {
 
             {/* The week, as rhythm rather than a table. */}
             {week.length > 0 && (
-              <section className="relative mt-10 overflow-hidden rounded-[26px] bg-moss/20 p-6">
+              <section className="rise rise-2 relative mt-10 overflow-hidden rounded-[26px] bg-moss/20 p-6">
                 <div aria-hidden="true" className="absolute -bottom-3 -right-6 text-moss/40">
                   <Waves size={190} />
                 </div>
@@ -267,6 +272,8 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {isDemo && <DemoWelcome name={name || "Maya"} />}
 
       <CheckInPrompt
         capacity={checkin ? capacityLabel(toBloom(checkin)) : null}

@@ -51,7 +51,7 @@ export default function WorkoutDetail() {
     <>
       <main className="pb-36 lg:pb-10 lg:pl-56">
         {/* Hero */}
-        <section className="relative overflow-hidden bg-moss/25 px-5 pb-10 pt-10">
+        <section className="relative overflow-hidden bg-moss/25 px-5 pb-14 pt-10">
           <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-16 text-moss/40">
             <Blob size={300} />
           </div>
@@ -87,7 +87,7 @@ export default function WorkoutDetail() {
 
         <div className="mx-auto max-w-3xl px-5">
           {/* Adapt CTA, the one that matters most */}
-          <section className="-mt-5 rounded-[24px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-32px_rgba(47,58,51,0.35)]">
+          <section className="relative z-10 -mt-8 rounded-[24px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-32px_rgba(47,58,51,0.35)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-display text-2xl">Feeling different today?</p>

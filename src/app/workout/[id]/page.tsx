@@ -8,7 +8,10 @@ import {
   workoutById,
   workoutMovements,
 } from "@/lib/workouts";
-import { howToUrl } from "@/lib/demo-data";
+import { mediaForMovement } from "@/lib/movement-media";
+import MovementDemo from "@/components/MovementDemo";
+import { readCalm, useCalmSync } from "@/components/CalmMode";
+import type { Movement } from "@/types/domain";
 import { addToDay, loadWeek, todayName, type PlannedDay } from "@/lib/week";
 import AppNav from "@/components/AppNav";
 import { useIdentity } from "@/lib/identity";
@@ -36,6 +39,10 @@ export default function WorkoutDetail() {
   const workout = workoutById(params.id);
   const [week, setWeek] = useState<PlannedDay[]>([]);
   const [added, setAdded] = useState<string | null>(null);
+  /* One sheet for the whole list. */
+  const [demo, setDemo] = useState<Movement | null>(null);
+  const [calm, setCalm] = useState(false);
+  useCalmSync(setCalm);
 
   const { identity, loading } = useIdentity();
   const uid = identity?.id ?? null;
@@ -44,6 +51,7 @@ export default function WorkoutDetail() {
   useEffect(() => {
     if (loading) return;
     setWeek(loadWeek(uid, isDemo));
+    setCalm(readCalm(uid));
   }, [loading, uid, isDemo]);
 
   if (!workout) {
@@ -165,15 +173,22 @@ export default function WorkoutDetail() {
                         {block.prescription}
                       </p>
                     </div>
-                    <a
-                      href={howToUrl(movement)}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`How to do ${movement.name}`}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-canvas text-ink-soft ring-1 ring-ink/15 hover:ring-ink/30"
-                    >
-                      <HelpIcon size={18} />
-                    </a>
+                    {/* Only where a demonstration exists. One sheet opens for
+                        whichever movement asked, rather than a live player
+                        embedded beside every line of the list. */}
+                    {mediaForMovement(movement.id) && (
+                      <button
+                        onClick={() => setDemo(movement)}
+                        aria-haspopup="dialog"
+                        aria-label={`Watch a demonstration of ${movement.name}`}
+                        className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-full bg-canvas px-4 text-sm text-ink-soft ring-1 ring-ink/15 hover:ring-ink/30"
+                      >
+                        <span aria-hidden="true">
+                          <HelpIcon size={18} />
+                        </span>
+                        <span className="hidden sm:inline">Watch demonstration</span>
+                      </button>
+                    )}
                   </div>
                   <p className="mt-2 text-sm text-ink-soft">{movement.instructions}</p>
                   {block.rest_seconds > 0 && (
@@ -262,6 +277,15 @@ export default function WorkoutDetail() {
           </div>
         </div>
 
+        {demo && mediaForMovement(demo.id) && (
+          <MovementDemo
+            media={mediaForMovement(demo.id)!}
+            movementName={demo.name}
+            instructions={demo.instructions}
+            quiet={calm}
+            onClose={() => setDemo(null)}
+          />
+        )}
       </main>
       <AppNav />
     </>

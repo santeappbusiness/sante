@@ -66,6 +66,12 @@ export default function Landing() {
               The demo needs no account. It opens as Maya, a fictional woman with a week and a
               history already in it.
             </p>
+            {/* A note, not a warning. Desktop works; the phone is simply where
+                this was designed to be used. */}
+            <p className="mt-2 text-sm text-slate">
+              Designed mobile-first. For the most app-like experience, open the demo on your
+              phone. Desktop works too.
+            </p>
           </div>
 
           {/* Two real views, so the product is visible above the fold. */}
@@ -315,6 +321,43 @@ export default function Landing() {
             </li>
           ))}
         </ol>
+      </section>
+
+      {/* Not built, and said so. A roadmap is only worth printing if a reader
+          can tell at a glance that none of it is here yet, so this section is
+          quiet, has no buttons to press and no numbers to mistake for data. */}
+      <section className="mx-auto max-w-6xl px-6 pb-6">
+        <div className="rounded-[24px] bg-surface p-7 ring-1 ring-ink/10">
+          <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
+            On our roadmap
+          </p>
+          <p className="mt-2 max-w-xl text-sm text-ink-soft">
+            Not built yet. Listed so you know where Santé is going, not what it does today.
+          </p>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <h3 className="font-display text-lg">Cycle &amp; symptom history</h3>
+              <p className="mt-1 text-sm text-ink-soft">
+                Optional personal history based on what someone records. Not fertility
+                predictions, and not phase-based workout rules.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-display text-lg">Connected health</h3>
+              <p className="mt-1 text-sm text-ink-soft">
+                Apple Health and Samsung Health activity, sleep and movement data as supporting
+                context, with her own check-in still the primary signal.
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-5 text-xs text-slate">
+            Santé does not track menstrual cycles today. The optional &ldquo;anything else going
+            on today&rdquo; answers describe the current day only, and are not stored as a
+            history or used to predict anything.
+          </p>
+        </div>
       </section>
 
       {/* Close. */}

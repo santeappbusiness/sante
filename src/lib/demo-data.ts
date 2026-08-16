@@ -274,8 +274,6 @@ export const TODAYS_PLAN: DailyPlan = {
  */
 export const CONTEXT_TAGS: readonly string[] = ["jumping", "floor_work"];
 
-/** Where the question mark in a session goes. Santé does not host video, so it
- *  sends people somewhere they can actually watch the movement done properly. */
-export function howToUrl(m: Movement): string {
-  return `https://www.google.com/search?q=${encodeURIComponent("how to do " + m.name + " exercise form")}`;
-}
+/* The question mark used to open a Google search here. It now opens a curated
+   demonstration from src/lib/movement-media.ts, and offers nothing at all for a
+   movement with no verified video, which is why this helper is gone. */

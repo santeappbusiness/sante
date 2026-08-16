@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { DailyPlan, Movement } from "@/types/domain";
 import { Blob } from "./BrandShapes";
 import { usePublishBottomInset } from "@/lib/bottomInset";
+import { mediaForMovement, watchUrl } from "@/lib/movement-media";
+import MovementDemo from "./MovementDemo";
+import MediaStage from "./MediaStage";
 import {
   DoneIcon,
   HelpIcon,
@@ -15,7 +18,6 @@ import {
   SwapIcon,
 } from "./ControlIcons";
 import MovementTimer from "./MovementTimer";
-import { howToUrl } from "@/lib/demo-data";
 
 /**
  * The session, one movement at a time.
@@ -87,6 +89,16 @@ export default function SessionPlayer({
   const [index, setIndex] = useState(0);
   const [lastSwap, setLastSwap] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+
+  /* Opening a demonstration pauses the movement, and closing it deliberately
+     does not start it again. Coming back from watching how something is done
+     is not the same as being ready to do it, and a timer that resumes on its
+     own decides that for her. */
+  const [demoOpen, setDemoOpen] = useState(false);
+  function openDemo() {
+    setRunning(false);
+    setDemoOpen(true);
+  }
   const [justDone, setJustDone] = useState<string | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const advancing = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,6 +110,7 @@ export default function SessionPlayer({
 
   const movement = plan.movements[index];
   const total = plan.movements.length;
+  const media = mediaForMovement(movement.id);
 
   /* Moving between movements stops the clock. A timer that keeps running on a
      movement nobody is looking at is counting the wrong thing. */
@@ -235,6 +248,32 @@ export default function SessionPlayer({
           <Blob size={260} />
         </div>
 
+        {/* Demonstration first, then the name, then the one instruction that
+            matters, then the clock. Reading order and visual order agree, and
+            the frame holds its height whether or not she ever presses play. */}
+        {media && !quiet && (
+          <div className="relative mb-6">
+            <MediaStage
+              media={media}
+              movementName={movement.name}
+              quiet={quiet}
+              onPlay={() => setRunning(false)}
+            />
+            <p className="mt-2 text-xs leading-relaxed text-slate">
+              {media.title} · {media.channel}.{" "}
+              <a
+                href={watchUrl(media)}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                If it does not load, open it on YouTube
+              </a>
+              .
+            </p>
+          </div>
+        )}
+
         <div className="relative flex items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-4xl leading-tight sm:text-5xl">{movement.name}</h2>
@@ -243,22 +282,30 @@ export default function SessionPlayer({
             </p>
           </div>
 
-          {/* Not sure how it goes? Somewhere real, rather than a tooltip that
-              repeats the instruction in fewer words. */}
-          <a
-            href={howToUrl(movement)}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`How to do ${movement.name}, opens a search in a new tab`}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-canvas text-ink-soft ring-1 ring-ink/15 hover:text-ink"
-          >
-            <HelpIcon size={19} />
-          </a>
         </div>
 
         <p className="relative mt-6 max-w-lg text-xl leading-relaxed text-ink-soft">
           {movement.instructions}
         </p>
+
+        {/* In calm mode the stage above is not rendered, so this is how a
+            demonstration is reached: one explicit press, after the words, and
+            nothing playing until she asks. Offered only where a verified video
+            exists — a button leading to a search page, or to nothing, is worse
+            than none on a movement whose instructions are already here. */}
+        {media && quiet && (
+          <button
+            onClick={openDemo}
+            aria-label={`Watch a demonstration of ${movement.name}`}
+            aria-haspopup="dialog"
+            className="relative mt-5 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-canvas px-5 py-3 font-bold text-ink-soft ring-1 ring-ink/15 sm:w-auto"
+          >
+            <span aria-hidden="true">
+              <HelpIcon size={19} />
+            </span>
+            Watch demonstration
+          </button>
+        )}
 
         <div className="relative mt-6">
           <MovementTimer
@@ -392,6 +439,18 @@ export default function SessionPlayer({
           </button>
         </div>
       </div>
+
+      {/* Above the controls in the stacking order, and closing it leaves the
+          movement, its completion and any swap exactly where they were. */}
+      {demoOpen && media && (
+        <MovementDemo
+          media={media}
+          movementName={movement.name}
+          instructions={movement.instructions}
+          quiet={quiet}
+          onClose={() => setDemoOpen(false)}
+        />
+      )}
     </section>
   );
 }

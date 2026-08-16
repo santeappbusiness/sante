@@ -1,4 +1,4 @@
-/0002 reconcile · SQL
+
 -- ============================================================================
 -- Santé — migration 0002: reconcile with src/types/domain.ts
 --

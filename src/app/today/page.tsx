@@ -12,6 +12,7 @@ import type {
 import { MAYA, MOVEMENTS, TODAYS_PLAN } from "@/lib/demo-data";
 import { planForWorkoutId } from "@/lib/workouts";
 import { getStore, NOT_PERSISTED, type StoredSession } from "@/lib/storage";
+import { useIdentity } from "@/lib/identity";
 import { getSupabase } from "@/lib/supabase/client";
 import ReadinessRitual from "@/components/ReadinessRitual";
 import CapacityBloom, { toBloom } from "@/components/CapacityBloom";
@@ -23,7 +24,7 @@ import { PlayIcon } from "@/components/ControlIcons";
 import MakeItFit from "@/components/MakeItFit";
 import MemoryProposal from "@/components/MemoryProposal";
 import AppNav from "@/components/AppNav";
-import CalmModeToggle, { readCalm } from "@/components/CalmMode";
+import { readCalm, useCalmSync } from "@/components/CalmMode";
 import AdaptationReceipt, { type Receipt } from "@/components/AdaptationReceipt";
 import RebalanceProposal from "@/components/RebalanceProposal";
 import TodayContext, { contextTags, type TodayContextValue } from "@/components/TodayContext";
@@ -46,14 +47,16 @@ export default function Today() {
   const [streaming, setStreaming] = useState(false);
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const [nd, setNd] = useState(MAYA.neurodivergent_mode);
+  useCalmSync(setNd);
   const [context, setContext] = useState<TodayContextValue>({
     period_today: false,
     symptoms: [],
   });
-  const [who, setWho] = useState<{ name: string; isDemo: boolean }>({
-    name: MAYA.display_name,
-    isDemo: true,
-  });
+  /* Starts empty and unknown rather than "Maya, and this is the demo". The
+     old defaults meant a signed-in person saw a fictional name and a Reset
+     demo link for a moment before the page corrected itself. */
+  const { identity, loading: identityLoading } = useIdentity();
+  const [who, setWho] = useState<{ name: string }>({ name: "" });
 
   /* One ephemeral session per visitor. Two judges opening the link at the same
      time each get their own Maya. */
@@ -163,17 +166,18 @@ export default function Today() {
     setMemoryError(null);
   }, [stage]);
 
-  /* Whatever they chose last time wins over the profile default.
+  /* Her own preference, once we know who she is.
 
-     `calmKnown` matters more than it looks: nd starts on Maya's default, so
-     anything that branches on it during the first render branches on a guess.
-     The session opening did exactly that and skipped itself every time, since
-     calm mode means "no transition". */
+     `calmKnown` matters more than it looks: anything that branches on nd
+     during the first render branches on a guess. The session opening did
+     exactly that and skipped itself every time, since calm mode means "no
+     transition". */
   const [calmKnown, setCalmKnown] = useState(false);
   useEffect(() => {
-    setNd(readCalm(MAYA.neurodivergent_mode));
+    if (identityLoading) return;
+    setNd(readCalm(identity?.id ?? null));
     setCalmKnown(true);
-  }, []);
+  }, [identityLoading, identity]);
 
   /* An anonymous visitor is Maya. A signed-in person is themselves. */
   useEffect(() => {
@@ -185,29 +189,10 @@ export default function Today() {
       if (!user) return;
       const { data: row } = await sb
         .from("profiles")
-        .select("display_name, nd_mode")
+        .select("display_name")
         .maybeSingle();
-      /* Checked separately. Gating both on a truthy name meant someone who
-         never gave us one silently kept Maya's identity and lost their own
-         calm mode setting. */
-      if (row) {
-        setWho({ name: row.display_name ?? "", isDemo: Boolean(user.is_anonymous) });
-        setNd(Boolean(row.nd_mode));
-      }
+      if (row) setWho({ name: row.display_name ?? "" });
     })();
-  }, []);
-
-  /* Calm mode has to reach the database, not just this tab. The adaptation is
-     built on the server from the stored profile, so a toggle that only changed
-     React state left the session exactly as noisy as before. */
-  const setCalm = useCallback(async (on: boolean) => {
-    setNd(on);
-    const sb = getSupabase();
-    if (!sb) return;
-    const { data } = await sb.auth.getSession();
-    const id = data.session?.user?.id;
-    if (!id) return;
-    await sb.from("profiles").update({ nd_mode: on }).eq("id", id);
   }, []);
 
   const patch = useCallback(
@@ -422,30 +407,46 @@ export default function Today() {
               A greeting that opens on a placeholder is worse than one that
               opens on the sentence. */}
           <p className="mt-1 text-sm text-ink-soft">
-            {who.name ? `${who.name}, this` : "This"} is what you planned and what today can be.
+            {/* Only her plan once she has chosen one. Otherwise this is a
+                starting point Santé offered, and saying otherwise puts words
+                in her mouth on the first screen she sees. */}
+            {who.name ? `${who.name}, this` : "This"} is{" "}
+            {session.workout_id ? "what you planned" : "a starting point"} and what today can
+            be.
           </p>
         </div>
+        {/* Calm mode used to have its own switch here. It is in the navigation
+            now, on every screen, so a second copy of the same setting on this
+            one is just two controls to reconcile. */}
         <div className="flex flex-col items-end gap-2">
-          <CalmModeToggle value={nd} onChange={setCalm} compact />
-          <button
-            className="nd-secondary text-xs text-slate underline"
-            onClick={async () => {
-              const fresh = await store.reset(TODAYS_PLAN);
-              setSession(fresh);
-              setStage("plan");
-              setEvents([]);
-            }}
-          >
-            Reset demo
-          </button>
+          {/* Only for a confirmed demo, and only once we know. Offering a real
+              account a button that wipes her data back to a fictional woman's
+              week is the bug this whole packet started from. */}
+          {!identityLoading && identity?.isDemo && (
+            <button
+              className="nd-secondary text-xs text-slate underline"
+              onClick={async () => {
+                const fresh = await store.reset(TODAYS_PLAN);
+                setSession(fresh);
+                setStage("plan");
+                setEvents([]);
+              }}
+            >
+              Reset demo
+            </button>
+          )}
         </div>
       </header>
 
       {stage === "plan" && (
         <section className="mt-8 grid gap-5">
           <div className="rounded-[24px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_18px_44px_-30px_rgba(47,58,51,0.3)]">
+            {/* "What you planned" only once she has actually chosen or
+                scheduled it. Otherwise this is a starting point we generated,
+                and calling it her plan is a small untruth on the first screen
+                of a new account. */}
             <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
-              What you planned
+              {session.workout_id ? "What you planned" : "Your starter session"}
             </p>
             <p className="mt-2 font-display text-3xl leading-tight tabular-nums sm:text-4xl">
               {plan.total_minutes} min · {plan.intensity}
@@ -606,7 +607,9 @@ export default function Today() {
             </details>
 
             <details className="mt-2 rounded-2xl bg-surface p-5 ring-1 ring-ink/10">
-              <summary className="cursor-pointer font-bold">Compared with what you planned</summary>
+              <summary className="cursor-pointer font-bold">
+                Compared with {session.workout_id ? "what you planned" : "the starting point"}
+              </summary>
               <p className="mt-3 font-mono text-sm text-ink-soft">
                 {result.original.total_minutes} min · {result.original.movements.length} movements
                 {" → "}
@@ -665,6 +668,7 @@ export default function Today() {
             adapted={result.adapted}
             reasons={result.reasons}
             usedFallback={result.used_fallback}
+            originalLabel={session.workout_id ? "What you planned" : undefined}
           />
 
           {Boolean(session.receipt) && (
@@ -850,7 +854,7 @@ export default function Today() {
       )}
 
       <footer className="mt-14 text-xs leading-relaxed text-slate">
-        {who.isDemo && "Maya is a fictional demo user. "}Santé is a wellness tool, not a medical
+        {identity?.isDemo && "Maya is a fictional demo user. "}Santé is a wellness tool, not a medical
         one, and does not diagnose, treat, or give medical advice.
       </footer>
       </div>

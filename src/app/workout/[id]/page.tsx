@@ -11,6 +11,7 @@ import {
 import { howToUrl } from "@/lib/demo-data";
 import { addToDay, loadWeek, todayName, type PlannedDay } from "@/lib/week";
 import AppNav from "@/components/AppNav";
+import { useIdentity } from "@/lib/identity";
 import { Asterisk, Blob, Sprig } from "@/components/BrandShapes";
 import {
   EquipmentIcon,
@@ -36,7 +37,14 @@ export default function WorkoutDetail() {
   const [week, setWeek] = useState<PlannedDay[]>([]);
   const [added, setAdded] = useState<string | null>(null);
 
-  useEffect(() => setWeek(loadWeek()), []);
+  const { identity, loading } = useIdentity();
+  const uid = identity?.id ?? null;
+  const isDemo = Boolean(identity?.isDemo);
+
+  useEffect(() => {
+    if (loading) return;
+    setWeek(loadWeek(uid, isDemo));
+  }, [loading, uid, isDemo]);
 
   if (!workout) {
     return (
@@ -189,7 +197,7 @@ export default function WorkoutDetail() {
                 <button
                   key={d.day}
                   onClick={() => {
-                    setWeek(addToDay(d.day, workout));
+                    setWeek(addToDay(d.day, workout, uid, isDemo));
                     setAdded(d.day);
                   }}
                   className={

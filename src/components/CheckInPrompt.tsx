@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import { Flower } from "./BrandShapes";
+import { usePublishBottomInset } from "@/lib/bottomInset";
 
 /**
  * The sticky invitation to check in.
@@ -8,6 +10,9 @@ import { Flower } from "./BrandShapes";
  * Present without hunting, and gone once it is done: an app that keeps shouting
  * "check in" after you have checked in is not paying attention. Sits above the
  * bottom navigation and respects the safe area.
+ *
+ * It also reports its height to the bottom-inset registry, because the floating
+ * Calm control lives in the same corner and landed on top of this.
  */
 export default function CheckInPrompt({
   capacity,
@@ -17,8 +22,12 @@ export default function CheckInPrompt({
   capacity: string | null;
   onOpen: () => void;
 }) {
+  const box = useRef<HTMLDivElement>(null);
+  usePublishBottomInset(box);
+
   return (
     <div
+      ref={box}
       className="fixed inset-x-0 bottom-[60px] z-20 px-4 pb-3 lg:bottom-4 lg:left-auto lg:right-6 lg:w-80 lg:px-0"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
     >

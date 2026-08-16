@@ -10,6 +10,7 @@ import {
   TodayIcon,
   WeekIcon,
 } from "./NavIcons";
+import CalmToggleGlobal from "./CalmToggleGlobal";
 
 /**
  * Navigation.
@@ -36,6 +37,10 @@ export default function AppNav() {
 
   return (
     <>
+      {/* Calm mode, reachable from every screen rather than only from Today.
+          Above the bar on a phone, in the rail on a wide screen. */}
+      <CalmToggleGlobal variant="bar" />
+
       {/* Mobile: fixed bar, thumb height, safe-area aware. */}
       <nav
         aria-label="Main"
@@ -113,6 +118,8 @@ export default function AppNav() {
             );
           })}
         </ul>
+
+        <CalmToggleGlobal variant="rail" />
 
         <p className="px-3 text-xs leading-relaxed text-slate">
           Santé is a wellness tool, not a medical one.

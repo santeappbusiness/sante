@@ -32,6 +32,12 @@ export function getSupabase(): SupabaseClient | null {
  *
  * Requires anonymous sign-ins to be enabled in the Supabase Auth settings.
  */
+/* Two callers ask this at once on a first visit: the store, creating today's
+   session, and identity resolution, working out whose browser this is. Without
+   a shared in-flight promise that is two anonymous users for one visitor, and
+   whichever loses the race writes her state under an id nothing else reads. */
+let signingIn: Promise<string | null> | null = null;
+
 export async function ensureAnonymousSession(): Promise<string | null> {
   const sb = getSupabase();
   if (!sb) return null;
@@ -39,9 +45,16 @@ export async function ensureAnonymousSession(): Promise<string | null> {
   const { data } = await sb.auth.getSession();
   if (data.session?.user?.id) return data.session.user.id;
 
-  const { data: signed, error } = await sb.auth.signInAnonymously();
-  if (error || !signed.user) return null;
-  return signed.user.id;
+  if (!signingIn) {
+    signingIn = (async () => {
+      const { data: signed, error } = await sb.auth.signInAnonymously();
+      if (error || !signed.user) return null;
+      return signed.user.id;
+    })().finally(() => {
+      signingIn = null;
+    });
+  }
+  return signingIn;
 }
 
 /** Reset means a new identity rather than a delete, which is why the policies

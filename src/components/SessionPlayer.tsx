@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DailyPlan, Movement } from "@/types/domain";
 import { Blob } from "./BrandShapes";
+import { usePublishBottomInset } from "@/lib/bottomInset";
 import {
   DoneIcon,
   HelpIcon,
@@ -89,6 +90,11 @@ export default function SessionPlayer({
   const [justDone, setJustDone] = useState<string | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const advancing = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* The control bar is fixed above the navigation, so anything else that
+     floats down there has to be told how tall it is. */
+  const controls = useRef<HTMLDivElement>(null);
+  usePublishBottomInset(controls);
 
   const movement = plan.movements[index];
   const total = plan.movements.length;
@@ -326,6 +332,7 @@ export default function SessionPlayer({
           thumb always finds the same four things in the same order, static on
           a wide screen where nothing is out of reach. */}
       <div
+        ref={controls}
         className="fixed inset-x-0 bottom-[60px] z-20 border-t border-ink/10 bg-surface/95 px-5 py-3 backdrop-blur lg:bottom-0 lg:left-56"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
       >

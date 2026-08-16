@@ -76,11 +76,14 @@ export default function PlanDiff({
   adapted,
   reasons,
   usedFallback,
+  /* "What you planned" is only true once she chose it. */
+  originalLabel = "Your starter session",
 }: {
   original: DailyPlan;
   adapted: DailyPlan;
   reasons: string[];
   usedFallback: boolean;
+  originalLabel?: string;
 }) {
   const originalIds = new Set(original.movements.map((m) => m.id));
   const kept = new Set(adapted.movements.filter((m) => originalIds.has(m.id)).map((m) => m.id));
@@ -88,7 +91,7 @@ export default function PlanDiff({
   return (
     <div>
       <div className="grid items-stretch gap-4 sm:grid-cols-[1fr_auto_1fr]">
-        <Figure plan={original} label="What you planned" />
+        <Figure plan={original} label={originalLabel} />
 
         <div
           className="flex items-center justify-center text-coral morph-in morph-delay-1"

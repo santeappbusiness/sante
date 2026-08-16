@@ -6,14 +6,21 @@ import { workoutById, type Workout } from "@/lib/workouts";
 import { readSaved } from "@/components/SaveButton";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import AppNav from "@/components/AppNav";
+import { useIdentity } from "@/lib/identity";
 import { Blob } from "@/components/BrandShapes";
 
 export default function Saved() {
   const [items, setItems] = useState<Workout[] | null>(null);
+  const { identity, loading } = useIdentity();
 
   useEffect(() => {
-    setItems(readSaved().map(workoutById).filter((w): w is Workout => Boolean(w)));
-  }, []);
+    if (loading) return;
+    setItems(
+      readSaved(identity?.id ?? null)
+        .map(workoutById)
+        .filter((w): w is Workout => Boolean(w))
+    );
+  }, [loading, identity]);
 
   return (
     <>

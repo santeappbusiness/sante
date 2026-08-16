@@ -70,7 +70,7 @@ export default function Onboarding() {
      watching nothing change is not a preview. */
   useEffect(() => {
     document.documentElement.setAttribute("data-nd", a.nd_mode ? "on" : "off");
-    writeCalm(a.nd_mode);
+    writeCalm(a.nd_mode, null);
   }, [a.nd_mode]);
 
   /* A real preview, from the real constraint code, on an ordinary middling day.

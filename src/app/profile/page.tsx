@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { MAYA } from "@/lib/demo-data";
 import { getSupabase } from "@/lib/supabase/client";
 import AppNav from "@/components/AppNav";
-import CalmModeToggle, { readCalm } from "@/components/CalmMode";
+import CalmModeToggle, { readCalm, useCalmSync, writeCalm } from "@/components/CalmMode";
+import Orientation from "@/components/Orientation";
+import { forgetIdentity, isolateTo, readScoped, useIdentity, writeScoped } from "@/lib/identity";
 import { Blob, Flower, Sprig } from "@/components/BrandShapes";
 
 /**
@@ -51,17 +53,22 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [equipment, setEquipment] = useState<string[]>(["mat"]);
   const [calm, setCalm] = useState(false);
+  useCalmSync(setCalm);
   const [saved, setSaved] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
-  const [isDemo, setIsDemo] = useState(true);
+  const { identity, loading: identityLoading } = useIdentity();
+  const isDemo = Boolean(identity?.isDemo);
+  const [tour, setTour] = useState(false);
+
+  useEffect(() => {
+    if (identityLoading) return;
+    const id = identity?.id ?? null;
+    setCalm(readCalm(id));
+    setEquipment(readScoped<string[]>("equipment", id, ["mat"]));
+  }, [identityLoading, identity]);
 
   useEffect(() => {
     (async () => {
-      setCalm(readCalm(false));
-      try {
-        const raw = localStorage.getItem("sante-equipment");
-        if (raw) setEquipment(JSON.parse(raw));
-      } catch {}
 
       const fallback = {
         display_name: MAYA.display_name,
@@ -80,7 +87,6 @@ export default function ProfilePage() {
 
       const { data: session } = await sb.auth.getSession();
       setEmail(session.session?.user?.email ?? null);
-      setIsDemo(Boolean(session.session?.user?.is_anonymous));
 
       const { data } = await sb
         .from("profiles")
@@ -109,9 +115,7 @@ export default function ProfilePage() {
       ? equipment.filter((e) => e !== item)
       : [...equipment, item];
     setEquipment(next);
-    try {
-      localStorage.setItem("sante-equipment", JSON.stringify(next));
-    } catch {}
+    writeScoped("equipment", identity?.id ?? null, next);
   }
 
   if (!profile) {
@@ -268,9 +272,24 @@ export default function ProfilePage() {
               value={calm}
               onChange={(v) => {
                 setCalm(v);
+                writeCalm(v, identity?.id ?? null);
+                document.documentElement.setAttribute("data-nd", v ? "on" : "off");
                 patch({ nd_mode: v }, "Calm mode");
               }}
             />
+          </section>
+
+          <section className="mt-10 rounded-[24px] bg-moss/20 p-6">
+            <h2 className="font-display text-2xl">How Santé works</h2>
+            <p className="mt-1 max-w-md text-ink-soft">
+              The three things worth knowing, in about thirty seconds.
+            </p>
+            <button
+              onClick={() => setTour(true)}
+              className="mt-4 inline-flex min-h-[44px] items-center rounded-2xl bg-surface px-5 py-3 font-bold ring-1 ring-ink/15"
+            >
+              Take the tour again
+            </button>
           </section>
 
           <section className="mt-10">
@@ -366,6 +385,11 @@ export default function ProfilePage() {
             <button
               onClick={async () => {
                 const sb = getSupabase();
+                /* Everything this identity kept in the browser goes with her.
+                   Without this the next person to sign in on this laptop
+                   inherits the last one's week, saved sessions and calm mode. */
+                isolateTo("__signed-out__");
+                forgetIdentity();
                 await sb?.auth.signOut();
                 window.location.replace("/");
               }}
@@ -375,6 +399,9 @@ export default function ProfilePage() {
             </button>
           </section>
         </div>
+        {tour && identity && (
+          <Orientation identity={identity} quiet={calm} onClose={() => setTour(false)} />
+        )}
       </main>
       <AppNav />
     </>

@@ -1,35 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { readScoped, useIdentity, writeScoped } from "@/lib/identity";
 
 /**
  * Saving, at the level people actually think in: whole sessions, not
  * individual movements. Kept in the browser, which is the right weight for a
  * favourites list.
  */
-const KEY = "sante-saved-workouts";
+const KEY = "saved-workouts";
 
-export function readSaved(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) || "[]");
-  } catch {
-    return [];
-  }
+/** Saved sessions belong to whoever saved them, not to the browser. */
+export function readSaved(identityId: string | null): string[] {
+  return readScoped<string[]>(KEY, identityId, []);
 }
 
 export default function SaveButton({ workoutId }: { workoutId: string }) {
+  const { identity } = useIdentity();
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => setSaved(readSaved().includes(workoutId)), [workoutId]);
+  useEffect(() => {
+    setSaved(readSaved(identity?.id ?? null).includes(workoutId));
+  }, [workoutId, identity]);
 
   function toggle() {
-    const list = readSaved();
+    const id = identity?.id ?? null;
+    const list = readSaved(id);
     const next = list.includes(workoutId)
-      ? list.filter((id) => id !== workoutId)
+      ? list.filter((w) => w !== workoutId)
       : [...list, workoutId];
-    try {
-      localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {}
+    writeScoped(KEY, id, next);
     setSaved(next.includes(workoutId));
   }
 

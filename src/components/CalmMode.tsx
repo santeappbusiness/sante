@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { readScoped, writeScoped } from "@/lib/identity";
 
 /**
  * Calm mode.
@@ -21,21 +22,45 @@ import { useEffect, useRef, useState } from "react";
  * rather than being a toggle they have to find again every visit.
  */
 
-const KEY = "sante-calm";
+const KEY = "calm";
 
-export function readCalm(fallback: boolean): boolean {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw === "on") return true;
-    if (raw === "off") return false;
-  } catch {}
-  return fallback;
+/**
+ * Off unless this identity turned it on.
+ *
+ * It used to fall back to the demo persona's setting, which meant a fresh demo
+ * opened already in calm mode and a judge never saw Santé's ordinary look. It
+ * also meant one browser's choice followed the next account in.
+ */
+export function readCalm(identityId: string | null): boolean {
+  return readScoped<boolean>(KEY, identityId, false);
 }
 
-export function writeCalm(on: boolean) {
-  try {
-    localStorage.setItem(KEY, on ? "on" : "off");
-  } catch {}
+/**
+ * Calm mode has more than one switch: the floating pill, the rail, and the row
+ * in Profile. They are one setting, so a change made at any of them has to
+ * reach the others in the same breath. Without this the pill still read "off"
+ * moments after Profile had turned it on, and whichever control the person
+ * touched next silently undid the other.
+ */
+export const CALM_EVENT = "sante:calm";
+
+export function writeCalm(on: boolean, identityId: string | null) {
+  writeScoped(KEY, identityId, on);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent<boolean>(CALM_EVENT, { detail: on }));
+  }
+}
+
+/** Follow calm mode wherever it is changed from. */
+export function useCalmSync(apply: (on: boolean) => void) {
+  const latest = useRef(apply);
+  latest.current = apply;
+
+  useEffect(() => {
+    const handle = (e: Event) => latest.current((e as CustomEvent<boolean>).detail);
+    window.addEventListener(CALM_EVENT, handle);
+    return () => window.removeEventListener(CALM_EVENT, handle);
+  }, []);
 }
 
 export default function CalmModeToggle({
@@ -59,11 +84,8 @@ export default function CalmModeToggle({
    * page load, before anything had a chance to read it. The attribute is
    * presentational and still tracks every render.
    */
-  const persisted = useRef(false);
   useEffect(() => {
     document.documentElement.setAttribute("data-nd", value ? "on" : "off");
-    if (persisted.current) writeCalm(value);
-    else persisted.current = true;
   }, [value]);
 
   if (compact) {

@@ -1,5 +1,6 @@
 import type { DailyPlan } from "@/types/domain";
 import { movementById } from "./demo-data";
+import { readScoped, writeScoped } from "./identity";
 import type { Workout } from "./workouts";
 
 /**
@@ -25,7 +26,7 @@ export type PlannedDay = {
 };
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const KEY = "sante-week";
+const KEY = "week";
 
 export function defaultWeek(): PlannedDay[] {
   return [
@@ -39,18 +40,44 @@ export function defaultWeek(): PlannedDay[] {
   ];
 }
 
-export function loadWeek(): PlannedDay[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return defaultWeek();
+/**
+ * A week nobody has planned yet.
+ *
+ * What a new account should see. Maya's `defaultWeek` used to be the fallback
+ * for everyone, so a person who signed up an hour ago opened a full week of
+ * sessions she had never chosen, attributed to her. Seven rest days is not a
+ * placeholder: it is the truthful answer, and Progress already treats rest as
+ * a day rather than a gap.
+ */
+export function emptyWeek(): PlannedDay[] {
+  return DAYS.map((day) => ({
+    day,
+    kind: "rest" as DayKind,
+    title: "Nothing planned",
+    minutes: 0,
+    intensity: "low" as DailyPlan["intensity"],
+    movement_ids: [],
+  }));
 }
 
-export function saveWeek(week: PlannedDay[]) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(week));
-  } catch {}
+/** True when not one day has anything on it. */
+export function isWeekEmpty(week: PlannedDay[]): boolean {
+  return week.every((d) => d.movement_ids.length === 0 && d.kind === "rest");
+}
+
+/**
+ * This identity's week.
+ *
+ * The demo falls back to Maya's, because the demo is Maya and her story needs
+ * a past. Everyone else falls back to nothing, because they have not planned
+ * anything and the app should not pretend otherwise.
+ */
+export function loadWeek(identityId: string | null, isDemo = false): PlannedDay[] {
+  return readScoped<PlannedDay[] | null>(KEY, identityId, null) ?? (isDemo ? defaultWeek() : emptyWeek());
+}
+
+export function saveWeek(week: PlannedDay[], identityId: string | null) {
+  writeScoped(KEY, identityId, week);
 }
 
 export function todayName(): string {
@@ -118,19 +145,24 @@ export function proposeRebalance(
 }
 
 /** Clear a day back to rest. */
-export function clearDay(day: string): PlannedDay[] {
-  const week = loadWeek().map((d) =>
+export function clearDay(day: string, identityId: string | null, isDemo = false): PlannedDay[] {
+  const week = loadWeek(identityId, isDemo).map((d) =>
     d.day === day
       ? { ...d, kind: "rest" as DayKind, title: "Rest", minutes: 0, movement_ids: [], workout_id: undefined }
       : d
   );
-  saveWeek(week);
+  saveWeek(week, identityId);
   return week;
 }
 
 /** Move whatever is on one day to another, swapping if the target is taken. */
-export function moveDay(from: string, to: string): PlannedDay[] {
-  const week = loadWeek();
+export function moveDay(
+  from: string,
+  to: string,
+  identityId: string | null,
+  isDemo = false
+): PlannedDay[] {
+  const week = loadWeek(identityId, isDemo);
   const a = week.findIndex((d) => d.day === from);
   const b = week.findIndex((d) => d.day === to);
   if (a === -1 || b === -1) return week;
@@ -140,13 +172,18 @@ export function moveDay(from: string, to: string): PlannedDay[] {
   const displaced = { ...next[b], day: next[a].day };
   next[b] = carried;
   next[a] = displaced;
-  saveWeek(next);
+  saveWeek(next, identityId);
   return next;
 }
 
 /** Set a day's type without changing what is on it. */
-export function setDayKind(day: string, kind: DayKind): PlannedDay[] {
-  const week = loadWeek().map((d) =>
+export function setDayKind(
+  day: string,
+  kind: DayKind,
+  identityId: string | null,
+  isDemo = false
+): PlannedDay[] {
+  const week = loadWeek(identityId, isDemo).map((d) =>
     d.day === day
       ? {
           ...d,
@@ -157,13 +194,18 @@ export function setDayKind(day: string, kind: DayKind): PlannedDay[] {
         }
       : d
   );
-  saveWeek(week);
+  saveWeek(week, identityId);
   return week;
 }
 
 /** Schedule a workout onto a day. Returns the updated week. */
-export function addToDay(day: string, workout: Workout): PlannedDay[] {
-  const week = loadWeek().map((d) =>
+export function addToDay(
+  day: string,
+  workout: Workout,
+  identityId: string | null,
+  isDemo = false
+): PlannedDay[] {
+  const week = loadWeek(identityId, isDemo).map((d) =>
     d.day === day
       ? {
           ...d,
@@ -176,7 +218,7 @@ export function addToDay(day: string, workout: Workout): PlannedDay[] {
         }
       : d
   );
-  saveWeek(week);
+  saveWeek(week, identityId);
   return week;
 }
 

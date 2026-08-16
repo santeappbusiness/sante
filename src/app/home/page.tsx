@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 import { TODAYS_PLAN, MAYA } from "@/lib/demo-data";
 import { getStore, type HistoryEntry } from "@/lib/storage";
 import { getSupabase } from "@/lib/supabase/client";
-import { loadWeek, planMinutes, todayName, type PlannedDay } from "@/lib/week";
+import { isWeekEmpty, loadWeek, planMinutes, todayName, type PlannedDay } from "@/lib/week";
 import CapacityBloom, { capacityLabel, toBloom } from "@/components/CapacityBloom";
 import CheckInSheet from "@/components/CheckInSheet";
 import CheckInPrompt from "@/components/CheckInPrompt";
-import DemoWelcome from "@/components/DemoWelcome";
-import { readCalm } from "@/components/CalmMode";
+import Orientation, { hasSeenOrientation } from "@/components/Orientation";
+import { useIdentity } from "@/lib/identity";
+import { readCalm, useCalmSync } from "@/components/CalmMode";
 import { recommendWorkouts } from "@/lib/workouts";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import AppNav from "@/components/AppNav";
@@ -28,18 +29,32 @@ import type { ReadinessCheckin } from "@/types/domain";
  * resting counts toward it.
  */
 export default function Home() {
-  const [name, setName] = useState(MAYA.display_name);
+  const [name, setName] = useState("");
+  const [prefs, setPrefs] = useState<{ avoidTags: string[]; preferredMinutes: number }>({
+    avoidTags: [],
+    preferredMinutes: MAYA.preferred_minutes,
+  });
   const [checkin, setCheckin] = useState<ReadinessCheckin | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [week, setWeek] = useState<PlannedDay[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [calm, setCalm] = useState(false);
-  const [isDemo, setIsDemo] = useState(false);
+  useCalmSync(setCalm);
+  const { identity, loading: identityLoading } = useIdentity();
+  const [orientation, setOrientation] = useState(false);
+
+  /* Nothing that differs between the demo and a real account renders until the
+     identity is known, so a signed-in person never sees a flash of Maya. */
+  useEffect(() => {
+    if (identityLoading) return;
+    const id = identity?.id ?? null;
+    setWeek(loadWeek(id, Boolean(identity?.isDemo)));
+    setCalm(readCalm(id));
+    if (identity && !hasSeenOrientation(id)) setOrientation(true);
+  }, [identityLoading, identity]);
 
   useEffect(() => {
     (async () => {
-      setWeek(loadWeek());
-      setCalm(readCalm(false));
       const store = getStore();
       /* Home is the front door, so identity gets established here rather than
          only on Today. Without it a demo visitor who never opens Today has no
@@ -52,11 +67,19 @@ export default function Home() {
       if (!sb) return;
       /* A row with no name still replaces Maya's. Keeping her name because
          someone left theirs blank greets a real person as a fictional one. */
-      const { data: auth } = await sb.auth.getSession();
-      setIsDemo(Boolean(auth.session?.user?.is_anonymous));
-
-      const { data } = await sb.from("profiles").select("display_name").maybeSingle();
-      if (data) setName(data.display_name ?? "");
+      const { data } = await sb
+        .from("profiles")
+        .select("display_name, avoid_tags, preferred_minutes")
+        .maybeSingle();
+      if (data) {
+        setName(data.display_name ?? "");
+        /* Her own preferences, not the demo persona's. Recommending from
+           MAYA's constants meant every account was offered Maya's shortlist. */
+        setPrefs({
+          avoidTags: data.avoid_tags ?? [],
+          preferredMinutes: data.preferred_minutes ?? MAYA.preferred_minutes,
+        });
+      }
     })();
   }, []);
 
@@ -66,6 +89,7 @@ export default function Home() {
   const todayPlanned = week.find((d) => d.day === today);
   const isRestDay = todayPlanned?.kind === "rest";
   const peak = Math.max(1, ...week.map(planMinutes));
+  const emptyWeek = week.length > 0 && isWeekEmpty(week);
 
   return (
     <>
@@ -144,8 +168,14 @@ export default function Home() {
           <section className="rise relative z-10 -mt-10 rounded-[26px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-30px_rgba(47,58,51,0.3)]">
             <div className="flex items-start justify-between gap-4">
               <div>
+                {/* Only "as planned" when there is a week she actually has. A
+                    generated baseline described as her plan is a small lie on
+                    the first screen of a brand new account, and a rest day in a
+                    real week is planned even though it holds no movements. */}
                 <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
-                  {todayPlanned ? `${today}, as planned` : "Today, as planned"}
+                  {!emptyWeek && todayPlanned && (isRestDay || todayPlanned.movement_ids.length > 0)
+                    ? `${today}, as planned`
+                    : "Your starter session"}
                 </p>
                 <p className="mt-1.5 font-display text-3xl leading-tight tabular-nums">
                   {todayPlanned && todayPlanned.kind === "rest"
@@ -172,8 +202,13 @@ export default function Home() {
             )}
 
             <p className="mt-4 border-t border-ink/10 pt-3 text-sm text-slate">
+              {/* A rest day in a week she has is a decision worth defending. In
+                  a week that does not exist yet it is just an empty day, and
+                  calling it deliberate would be inventing an intention. */}
               {isRestDay
-                ? "Rest was planned here on purpose, and it counts in Progress."
+                ? emptyWeek
+                  ? "Nothing is planned for this week yet. Rest still counts in Progress."
+                  : "Rest was planned here on purpose, and it counts in Progress."
                 : "None of this is fixed. Check in and it becomes today's session."}
             </p>
           </section>
@@ -192,8 +227,8 @@ export default function Home() {
 
               <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                 {recommendWorkouts({
-                  avoidTags: MAYA.avoid_tags,
-                  preferredMinutes: MAYA.preferred_minutes,
+                  avoidTags: prefs.avoidTags,
+                  preferredMinutes: prefs.preferredMinutes,
                   calm,
                   limit: 3,
                 }).map((w, i) => (
@@ -251,9 +286,20 @@ export default function Home() {
                   })}
                 </div>
 
-                <p className="relative mt-3 text-sm text-ink-soft">
-                  Rest days are days, not gaps.
+                  <p className="relative mt-3 text-sm text-ink-soft">
+                  {emptyWeek
+                    ? "Nothing planned yet. Choose a session and put it on a day."
+                    : "Rest days are days, not gaps."}
                 </p>
+
+                {emptyWeek && (
+                  <Link
+                    href="/explore"
+                    className="relative mt-4 inline-flex min-h-[44px] items-center rounded-2xl bg-surface px-5 py-3 font-bold ring-1 ring-ink/15"
+                  >
+                    Find sessions
+                  </Link>
+                )}
               </section>
             )}
 
@@ -273,7 +319,9 @@ export default function Home() {
         </div>
       </main>
 
-      {isDemo && <DemoWelcome name={name || "Maya"} />}
+      {orientation && identity && (
+        <Orientation identity={identity} quiet={calm} onClose={() => setOrientation(false)} />
+      )}
 
       <CheckInPrompt
         capacity={checkin ? capacityLabel(toBloom(checkin)) : null}

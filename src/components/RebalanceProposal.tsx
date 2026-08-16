@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { loadWeek, planMinutes, proposeRebalance, saveWeek, todayName, type Rebalance } from "@/lib/week";
+import { useIdentity } from "@/lib/identity";
 
 /**
  * When today came out much lighter than planned, the load has to go somewhere
@@ -14,10 +15,13 @@ import { loadWeek, planMinutes, proposeRebalance, saveWeek, todayName, type Reba
 export default function RebalanceProposal({ actualMinutes }: { actualMinutes: number }) {
   const [proposal, setProposal] = useState<Rebalance | null>(null);
   const [done, setDone] = useState<"moved" | "kept" | null>(null);
+  const { identity, loading } = useIdentity();
 
   useEffect(() => {
-    setProposal(proposeRebalance(loadWeek(), todayName(), actualMinutes));
-  }, [actualMinutes]);
+    if (loading) return;
+    const week = loadWeek(identity?.id ?? null, Boolean(identity?.isDemo));
+    setProposal(proposeRebalance(week, todayName(), actualMinutes));
+  }, [actualMinutes, loading, identity]);
 
   if (done === "moved")
     return (
@@ -62,7 +66,7 @@ export default function RebalanceProposal({ actualMinutes }: { actualMinutes: nu
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           onClick={() => {
-            saveWeek(proposal.after);
+            saveWeek(proposal.after, identity?.id ?? null);
             setDone("moved");
           }}
           className="rounded-xl bg-coral px-5 py-2.5 font-bold text-coral-on"

@@ -2,6 +2,7 @@ import type { DailyPlan, FeedbackVerdict, Movement } from "@/types/domain";
 import { movementById, TODAYS_PLAN } from "@/lib/demo-data";
 import { NOT_PERSISTED, type HistoryEntry, type PersistResult, type Store, type StoredSession } from "@/lib/storage";
 import { ensureAnonymousSession, getSupabase, newAnonymousSession } from "./client";
+import { forgetIdentity, isolateTo, scopedKey } from "@/lib/identity";
 
 /**
  * Supabase-backed store.
@@ -21,7 +22,9 @@ import { ensureAnonymousSession, getSupabase, newAnonymousSession } from "./clie
  *                     round trip to record which movement someone just tapped.
  */
 
-const LOCAL = "sante-ui-state";
+/* Namespaced per identity. A single shared key meant the stage, the plan and
+   the last result survived a sign-out and greeted the next account. */
+const LOCAL_BASE = "ui-state";
 
 /* Everything about the session except what Postgres owns. Partial, because a
    fresh visitor has none of it yet. */
@@ -30,9 +33,14 @@ type LocalState = Partial<StoredSession> & {
   completed_movement_ids: string[];
 };
 
-function readLocal(): LocalState {
+function localKey(id: string | null) {
+  return id ? scopedKey(LOCAL_BASE, id) : null;
+}
+
+function readLocal(id: string | null): LocalState {
+  const key = localKey(id);
   try {
-    const raw = sessionStorage.getItem(LOCAL);
+    const raw = key ? sessionStorage.getItem(key) : null;
     if (raw) return JSON.parse(raw) as LocalState;
   } catch {}
   return {
@@ -43,9 +51,11 @@ function readLocal(): LocalState {
   } as LocalState;
 }
 
-function writeLocal(state: LocalState) {
+function writeLocal(state: LocalState, id: string | null) {
+  const key = localKey(id);
+  if (!key) return;
   try {
-    sessionStorage.setItem(LOCAL, JSON.stringify(state));
+    sessionStorage.setItem(key, JSON.stringify(state));
   } catch {}
 }
 
@@ -88,6 +98,8 @@ export class SupabaseStore implements Store {
     if (!sb || !uid) return this.offline(seedPlan);
 
     this.profileId = uid;
+    /* A brand new anonymous identity: clear whatever the last one left. */
+    isolateTo(uid);
 
     /* Seeds Maya's profile and baseline plan against this identity. Safe to call
        again: it inserts on conflict do nothing. */
@@ -112,7 +124,7 @@ export class SupabaseStore implements Store {
        identity from a previous visit never goes through createSession, and
        without this they would keep landing on an empty demo forever. */
     await this.bootstrap(uid);
-    return this.hydrate(TODAYS_PLAN, readLocal());
+    return this.hydrate(TODAYS_PLAN, readLocal(uid));
   }
 
   /**
@@ -149,12 +161,12 @@ export class SupabaseStore implements Store {
   }
 
   async save(patch: Partial<StoredSession>): Promise<void> {
-    const local = readLocal();
+    const id = this.profileId;
+    const local = readLocal(id);
     /* Merge rather than pick field by field: every new piece of session state
        was silently dropped here, and a swap pool that vanishes takes the
        mid-session swap with it. */
-    writeLocal({ ...local, ...patch } as LocalState);
-
+    writeLocal({ ...local, ...patch } as LocalState, id);
   }
 
   /* Feedback is the one row the client may write, and the one that has to
@@ -233,8 +245,13 @@ export class SupabaseStore implements Store {
 
   async reset(seedPlan: DailyPlan): Promise<StoredSession> {
     try {
-      sessionStorage.removeItem(LOCAL);
+      const key = localKey(this.profileId);
+      if (key) sessionStorage.removeItem(key);
     } catch {}
+    /* The identity is about to change, so the next read must not hand back the
+       one that is leaving. */
+    forgetIdentity();
+    this.profileId = null;
     /* A new identity rather than a delete, which is why having no DELETE policy
        costs us nothing. */
     await newAnonymousSession();
@@ -270,7 +287,7 @@ export class SupabaseStore implements Store {
   /** If Supabase is unreachable the app still runs, on the local plan. Losing
    *  the database should degrade the demo, never end it. */
   private offline(seedPlan: DailyPlan): StoredSession {
-    const local = readLocal();
+    const local = readLocal(this.profileId);
     return {
       ...local,
       session_id: "offline",

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   clearDay,
+  isWeekEmpty,
   loadWeek,
   moveDay,
   planMinutes,
@@ -15,6 +16,7 @@ import {
 import { workoutById } from "@/lib/workouts";
 import { movementById } from "@/lib/demo-data";
 import AppNav from "@/components/AppNav";
+import { useIdentity } from "@/lib/identity";
 import { Blob, Waves } from "@/components/BrandShapes";
 
 /**
@@ -43,12 +45,21 @@ export default function Plan() {
   const [week, setWeek] = useState<PlannedDay[] | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const today = todayName();
+  const { identity, loading } = useIdentity();
+  const uid = identity?.id ?? null;
+  const isDemo = Boolean(identity?.isDemo);
 
-  useEffect(() => setWeek(loadWeek()), []);
+  /* Waits for the identity. Loading Maya's week and correcting it a tick later
+     is how a new account came to believe it had planned six sessions. */
+  useEffect(() => {
+    if (loading) return;
+    setWeek(loadWeek(uid, isDemo));
+  }, [loading, uid, isDemo]);
 
   const total = week?.reduce((s, d) => s + planMinutes(d), 0) ?? 0;
   const restDays = week?.filter((d) => d.kind === "rest").length ?? 0;
   const sessions = week?.filter((d) => d.kind !== "rest").length ?? 0;
+  const empty = Boolean(week && isWeekEmpty(week));
 
   return (
     <>
@@ -64,7 +75,9 @@ export default function Plan() {
           <div className="relative mx-auto max-w-3xl">
             <h1 className="font-display text-4xl leading-tight sm:text-5xl">Your week</h1>
             <p className="mt-2 max-w-md text-lg text-ink-soft">
-              A shape to start from. Every day of it can still change on the day.
+              {empty
+                ? "Nothing planned yet. Put a session on a day and it becomes that day's intention."
+                : "A shape to start from. Every day of it can still change on the day."}
             </p>
 
             <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
@@ -85,7 +98,25 @@ export default function Plan() {
         </section>
 
         <div className="mx-auto max-w-3xl px-5">
-          <div className="relative z-10 -mt-8 grid gap-2">
+          {/* An honest empty week, with the one action that fills it. Maya's
+              week is hers; a new account starts with nothing and is told so. */}
+          {empty && (
+            <div className="relative z-10 -mt-8 rounded-[26px] bg-surface p-7 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-32px_rgba(47,58,51,0.35)]">
+              <p className="font-display text-2xl">Your week is yours to fill.</p>
+              <p className="mt-2 max-w-md text-ink-soft">
+                Pick a session, choose a day, and it becomes what you intended for that day.
+                It can still flex when the day arrives.
+              </p>
+              <Link
+                href="/explore"
+                className="mt-5 inline-flex min-h-[44px] items-center rounded-2xl bg-coral px-6 py-3 font-bold text-coral-on"
+              >
+                Find sessions
+              </Link>
+            </div>
+          )}
+
+          <div className={(empty ? "mt-6" : "relative z-10 -mt-8 ") + " grid gap-2"}>
             {week?.map((d) => {
               const isToday = d.day === today;
               const isEditing = editing === d.day;
@@ -134,7 +165,10 @@ export default function Plan() {
                     </p>
                   )}
 
-                  {d.kind === "rest" && !isEditing && (
+                  {/* Only in a week she actually has. In an empty one this is
+                      not a chosen rest day, it is a day nobody has touched, and
+                      saying it was planned invents a decision she never made. */}
+                  {d.kind === "rest" && !isEditing && !empty && (
                     <p className="mt-3 text-sm text-slate">
                       Rest is planned here on purpose, and it counts in Progress.
                     </p>
@@ -149,7 +183,7 @@ export default function Plan() {
                         {(["session", "recovery", "rest"] as DayKind[]).map((k) => (
                           <button
                             key={k}
-                            onClick={() => setWeek(setDayKind(d.day, k))}
+                            onClick={() => setWeek(setDayKind(d.day, k, uid, isDemo))}
                             aria-pressed={d.kind === k}
                             className={
                               "rounded-full px-4 py-2 text-sm ring-1 " +
@@ -173,7 +207,7 @@ export default function Plan() {
                             <button
                               key={other.day}
                               onClick={() => {
-                                setWeek(moveDay(d.day, other.day));
+                                setWeek(moveDay(d.day, other.day, uid, isDemo));
                                 setEditing(null);
                               }}
                               className="rounded-full bg-surface px-3.5 py-2 text-sm ring-1 ring-ink/15 hover:ring-ink/30"
@@ -201,7 +235,7 @@ export default function Plan() {
                         {d.kind !== "rest" && (
                           <button
                             onClick={() => {
-                              setWeek(clearDay(d.day));
+                              setWeek(clearDay(d.day, uid, isDemo));
                               setEditing(null);
                             }}
                             className="rounded-xl px-4 py-2.5 text-sm text-ink-soft underline"

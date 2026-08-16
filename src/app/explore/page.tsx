@@ -16,6 +16,7 @@ import { readSaved } from "@/components/SaveButton";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import AppNav from "@/components/AppNav";
 import { Blob } from "@/components/BrandShapes";
+import { useIdentity } from "@/lib/identity";
 import { SwapIcon } from "@/components/ControlIcons";
 
 /**
@@ -43,15 +44,18 @@ export default function Explore() {
   const [saved, setSaved] = useState<string[]>([]);
   const [planned, setPlanned] = useState<string[]>([]);
   const [surprise, setSurprise] = useState<Workout | null>(null);
+  const { identity, loading: identityLoading } = useIdentity();
 
   useEffect(() => {
-    setSaved(readSaved());
+    if (identityLoading) return;
+    const id = identity?.id ?? null;
+    setSaved(readSaved(id));
     setPlanned(
-      loadWeek()
+      loadWeek(id, Boolean(identity?.isDemo))
         .map((d) => d.workout_id)
         .filter((id): id is string => Boolean(id))
     );
-  }, []);
+  }, [identityLoading, identity]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();

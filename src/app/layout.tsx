@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Santé — your plan can flex",
+  title: "Santé — a women's wellness app that adapts to the day you are having",
   description:
-    "Santé adapts today's movement plan to the capacity you actually have, from a 20-second check-in. No wearable, no guilt.",
+    "Santé is a women's wellness app that adapts a woman's planned movement to the energy, discomfort, mood and sensory load she has today. A twenty-second check-in, no wearable, no guilt.",
   openGraph: {
-    title: "Santé — your plan can flex",
+    title: "Santé — a women's wellness app that adapts to the day you are having",
     description:
-      "A 20-second check-in, and today's session adapts to the capacity you actually have.",
+      "Built for women. A twenty-second check-in, and today's session fits the capacity she actually has.",
     type: "website",
   },
   twitter: { card: "summary_large_image" },

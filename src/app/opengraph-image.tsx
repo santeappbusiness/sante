@@ -9,7 +9,7 @@ import { ImageResponse } from "next/og";
  */
 
 export const runtime = "edge";
-export const alt = "Santé — your plan can flex";
+export const alt = "Santé — a women's wellness app. Keep the goal. Change the route.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -41,8 +41,12 @@ export default async function Image() {
           Santé
         </div>
 
-        <div style={{ fontSize: 76, marginTop: 18, lineHeight: 1.05 }}>
-          Your plan can flex.
+        <div style={{ fontSize: 30, marginTop: 10, color: "#57666C", fontFamily: "sans-serif" }}>
+          A wellness app built for women
+        </div>
+
+        <div style={{ fontSize: 72, marginTop: 14, lineHeight: 1.05 }}>
+          Keep the goal. Change the route.
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 34, marginTop: 56 }}>
@@ -88,7 +92,7 @@ export default async function Image() {
             fontFamily: "sans-serif",
           }}
         >
-          A 20-second check-in, not a wearable.
+          Her plan, fitted to the day she is actually having. No wearable.
         </div>
       </div>
     ),

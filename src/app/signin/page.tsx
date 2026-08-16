@@ -111,7 +111,7 @@ export default function SignIn() {
         <p className="mt-2 text-ink-soft">
           {mode === "in"
             ? "Pick up where you left off."
-            : "A plan that can flex takes about a minute to set up."}
+            : "Santé is a wellness app for women. A plan that can flex takes about a minute to set up."}
         </p>
 
         <form onSubmit={submit} className="mt-8 grid gap-3">
@@ -203,7 +203,7 @@ export default function SignIn() {
             <div>
               <p className="font-bold">Just looking?</p>
               <p className="text-sm text-ink-soft">
-                Open Santé as Maya, with a week already in it.
+                Open Santé as Maya, a fictional woman with a week already in it.
               </p>
             </div>
           </div>

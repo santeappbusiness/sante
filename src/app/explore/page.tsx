@@ -37,7 +37,7 @@ export default function Explore() {
           <div className="relative mx-auto max-w-4xl">
             <h1 className="font-display text-4xl leading-tight sm:text-5xl">Explore</h1>
             <p className="mt-2 max-w-md text-lg text-ink-soft">
-              Sessions grouped by how a day feels, not by what a muscle is called.
+              Sessions for women, grouped by how a day feels rather than by what a muscle is called.
             </p>
 
             <label className="sr-only" htmlFor="explore-search">

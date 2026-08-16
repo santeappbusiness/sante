@@ -32,16 +32,20 @@ export default function Landing() {
           <div>
             <img src="/brand/sante-mark.png" alt="Santé" className="-ml-5 w-48 sm:w-56" />
 
-            <h1 className="mt-7 max-w-2xl font-display text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">
+            <p className="mt-7 text-sm font-bold uppercase tracking-[0.16em] text-moss-deep">
+              A wellness app built for women
+            </p>
+
+            <h1 className="mt-3 max-w-2xl font-display text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">
               Keep the goal.
               <br />
               Change the route.
             </h1>
 
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink-soft sm:text-xl">
-              A movement app that adapts today&rsquo;s session to the capacity you actually
-              have. Energy, discomfort, mood, sensory load, and the preferences that make
-              movement work for you.
+              Santé adapts a woman&rsquo;s planned movement to the energy, discomfort, mood and
+              sensory load she actually has today, alongside the preferences that make
+              movement work for her.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -59,8 +63,8 @@ export default function Landing() {
               </Link>
             </div>
             <p className="mt-3 text-sm text-slate">
-              The demo needs no account. It opens as Maya, with a week and a history already
-              in it.
+              The demo needs no account. It opens as Maya, a fictional woman with a week and a
+              history already in it.
             </p>
           </div>
 
@@ -83,17 +87,17 @@ export default function Landing() {
             <Sprig size={44} />
           </div>
           <p className="max-w-3xl font-display text-3xl leading-snug sm:text-4xl lg:text-5xl">
-            Most apps assume every day is the same, then treat missing one as failing.
+            Most apps hand a woman the same plan every day, then treat missing it as failing.
           </p>
           <div className="mt-12 grid gap-8 sm:grid-cols-3">
             {[
               [
                 "Capacity is not constant",
-                "Energy, pain, mood and sensory load change day to day, and for a lot of people they change a great deal.",
+                "Energy, pain, mood and sensory load change day to day, and for a lot of women they change a great deal.",
               ],
               [
                 "Adapting usually costs money",
-                "The apps that respond to daily readiness mostly need a wearable, which prices out the people whose days vary most.",
+                "The apps that respond to daily readiness mostly need a wearable, which prices out the women whose days vary most.",
               ],
               [
                 "So the plan gets abandoned",
@@ -251,12 +255,16 @@ export default function Landing() {
           <Waves size={300} />
         </div>
         <div className="relative mx-auto max-w-5xl">
-          <h2 className="font-display text-4xl leading-tight sm:text-5xl">Built for</h2>
+          <h2 className="font-display text-4xl leading-tight sm:text-5xl">Built for women</h2>
+          <p className="mt-3 max-w-xl text-lg text-ink-soft">
+            Not all the same woman. Santé asks how today is rather than assuming, and no two
+            answers give back the same session.
+          </p>
           <div className="mt-8 grid gap-8 sm:grid-cols-3">
             {[
               [
-                "Days that vary",
-                "Anyone whose energy, pain or focus is different on Tuesday than it was on Monday.",
+                "Women whose days vary",
+                "Whose energy, pain or focus is different on Tuesday than it was on Monday, for whatever reason.",
               ],
               [
                 "Different brains",
@@ -319,7 +327,7 @@ export default function Landing() {
         </div>
         <div className="relative mx-auto max-w-3xl text-center">
           <p className="font-display text-4xl leading-snug sm:text-5xl">
-            The plan changes. The intention does not.
+            A changed day is not a failed one. The plan changes, the intention does not.
           </p>
           <Link
             href="/home"

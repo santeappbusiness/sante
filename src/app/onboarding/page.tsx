@@ -146,16 +146,16 @@ export default function Onboarding() {
               Welcome. Let&rsquo;s make this yours.
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-ink-soft">
-              Santé changes today&rsquo;s session to fit the day you are actually having. Six
-              short questions and it knows where to start from. You can skip any of them and
-              change all of them later.
+              Santé is a wellness app for women, and it changes today&rsquo;s session to fit the day
+              you are actually having. Six short questions and it knows where to start from.
+              You can skip any of them, and change all of them later.
             </p>
 
             <ul className="mt-7 grid gap-2.5">
               {[
                 ["No wearable", "Four questions on a slider, about twenty seconds."],
                 ["Nothing fixed", "Every answer here is editable from your profile."],
-                ["No diagnoses", "Santé never asks what is wrong with you."],
+                ["No diagnoses", "Santé never asks what is wrong with you, and never guesses."],
               ].map(([title, body], i) => (
                 <li
                   key={title}

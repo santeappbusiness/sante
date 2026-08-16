@@ -73,7 +73,7 @@ export default function DemoWelcome({ name }: { name: string }) {
           This is {name}&rsquo;s Santé.
         </h2>
         <p className="relative mt-2.5 text-ink-soft">
-          A fictional person with a real week behind her, so there is something to look at.
+          A fictional woman with a real week behind her, so there is something to look at.
           Everything you change is yours and nobody else sees it.
         </p>
 

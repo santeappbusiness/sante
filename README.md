@@ -1,22 +1,24 @@
 # Santé
 
-**Your body changed today. Your plan should too.**
+**A women's wellness app. Keep the goal. Change the route.**
 
-Santé adapts today's movement plan to the capacity you actually have, based on a twenty-second
-check-in instead of a wearable. When the plan is too much, it shortens it, explains why, and
-lets you keep the original if you disagree.
+Santé is a women's wellness app that adapts a woman's planned movement to the energy,
+discomfort, mood and sensory load she has today. The input is a twenty-second check-in rather
+than a wearable. When the plan is too much for the day, Santé shortens it, explains why, and
+lets her keep the original if she disagrees.
 
 ---
 
 ## The problem
 
-Most wellness apps assume every day is the same. They hand you a fixed plan and treat missing
-it as a failure, which is how people end up abandoning something that was supposed to help.
+Most wellness apps hand a woman the same fixed plan every day and treat missing it as a
+failure, which is how people end up abandoning something that was supposed to help.
 
 Capacity is not constant. Energy, pain, mood and sensory overload change day to day, and for
-a lot of people they change a great deal. The apps that do adapt to daily readiness mostly
-require a wearable, which means the people most likely to have unpredictable days are the
-least likely to be able to afford the hardware that would help.
+a lot of women they change a great deal. Santé does not assume why, and never asks. The apps
+that do adapt to daily readiness mostly require a wearable, which means the women most likely
+to have unpredictable days are the least likely to be able to afford the hardware that would
+help.
 
 ## What Santé does
 
@@ -51,8 +53,12 @@ today's limits being worked out, the movement options being looked up, the plan 
 against those limits. Those are real events from the real process, not a loading animation.
 
 **Sensory load is a first-class input.** Sensory overload is a reason a session might be too
-much, and Santé treats it as one. A simplified mode reduces choices, removes motion, and cuts
-the interface back to one thing at a time.
+much, and Santé treats it as one, kept separate from physical capacity. Calm mode reduces
+choices, removes motion, and cuts the interface back to one thing at a time.
+
+**Built for women, not narrowed to one kind of woman.** Santé asks how today is rather than
+assuming what a woman's day should look like. Two people answering differently get different
+sessions.
 
 **No guilt.** Nothing in the app frames a lighter day as a failure or praises pushing through.
 
@@ -88,9 +94,10 @@ time cannot see anything belonging to each other.
 ## Not a medical product
 
 Santé is a wellness tool. It does not diagnose, treat, prevent injury, or give medical advice,
-and it is not a substitute for a health professional. Adaptations refer only to what someone
-reported in their check-in that day. Any context a person chooses to share about themselves is
-never treated as clinical information and never used to justify a recommendation.
+and it is not a substitute for a health professional. It does not track menstrual cycles,
+predict phases, or make any claim about hormones or pregnancy. Adaptations refer only to what
+someone reported in their check-in that day. Any context a person chooses to share about
+herself is never treated as clinical information and never used to justify a recommendation.
 
 ## Built with
 

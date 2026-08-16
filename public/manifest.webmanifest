@@ -1,7 +1,7 @@
 {
   "name": "Santé",
   "short_name": "Santé",
-  "description": "Your plan can flex. A 20-second check-in, and today's session adapts to the capacity you actually have.",
+  "description": "A women's wellness app. A twenty-second check-in, and today's session adapts to the capacity you actually have.",
   "start_url": "/today",
   "display": "standalone",
   "background_color": "#F7F6F2",

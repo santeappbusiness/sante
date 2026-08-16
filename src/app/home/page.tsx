@@ -216,11 +216,18 @@ export default function Home() {
           {/* On a wide screen the offers and the week sit side by side, so the
               page stops being one narrow column with dead space either side. */}
           <div className="lg:grid lg:grid-cols-[1.55fr_1fr] lg:items-start lg:gap-8">
-            {/* Collections. Full-bleed feeling row, different shape to everything else. */}
+            {/* Collections. Full-bleed feeling row, different shape to everything else.
+
+                The link beside each heading is padded past its text height so a
+                thumb can hit it. The negative margin cancels the padding in the
+                layout, so the hit area grows and nothing visibly moves. */}
             <section className="rise rise-1 mt-10">
               <div className="flex items-baseline justify-between">
                 <h2 className="font-display text-2xl">For a day like this</h2>
-                <Link href="/explore" className="text-sm text-slate underline">
+                <Link
+                  href="/explore"
+                  className="-my-3 py-3 text-sm text-slate underline"
+                >
                   All collections
                 </Link>
               </div>
@@ -245,7 +252,7 @@ export default function Home() {
                 </div>
                 <div className="relative flex items-baseline justify-between">
                   <h2 className="font-display text-2xl">Your week</h2>
-                  <Link href="/plan" className="text-sm text-slate underline">
+                  <Link href="/plan" className="-my-3 py-3 text-sm text-slate underline">
                     Open
                   </Link>
                 </div>
@@ -310,7 +317,7 @@ export default function Home() {
                   {history.length} day{history.length === 1 ? "" : "s"} where you checked in and
                   adjusted rather than pushing through.
                 </p>
-                <Link href="/progress" className="mt-3 inline-block text-sm underline">
+                <Link href="/progress" className="mt-1 inline-block py-3 text-sm underline">
                   See progress
                 </Link>
               </section>

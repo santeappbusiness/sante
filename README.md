@@ -129,26 +129,6 @@ the request body.
 We worked across those lines when the product needed it. The table describes ownership, not four
 separate projects.
 
-## Run it locally
-
-```bash
-npm install
-cp .env.example .env.local
-npm run dev
-```
-
-Add the Supabase and OpenAI environment values described in `.env.example`. The deterministic
-adaptation path can still build a session without an OpenAI key, but the complete authenticated
-product expects Supabase to be configured.
-
-## Writing about Santé
-
-We want the submission and social posts to sound like the people who built the product. Jue’s
-short editing guide, the facts that must stay accurate, and ready-to-adapt social copy are in
-[the team writing and social guide](docs/JUE_WRITING_AND_SOCIAL_GUIDE.md).
-
----
-
 <div align="center">
   <strong>A changed day is not a failed one.</strong><br />
   The plan changes. The intention does not.

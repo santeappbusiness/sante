@@ -43,6 +43,24 @@ export default function Home() {
   const { identity, loading: identityLoading } = useIdentity();
   const [orientation, setOrientation] = useState(false);
 
+  /**
+   * What time it is, read after mount rather than while rendering.
+   *
+   * This page is prerendered, so anything derived from the clock at render
+   * time is fixed at whatever hour the build happened to run and then
+   * corrected a moment later on the device. That difference is a hydration
+   * mismatch, and React's response is to throw away the server-rendered HTML
+   * and start again — which is both the slowest possible first paint and a
+   * console full of errors that only ever appear in production.
+   */
+  const [greeting, setGreeting] = useState("");
+  const [today, setToday] = useState("");
+  useEffect(() => {
+    const hour = new Date().getHours();
+    setGreeting(hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening");
+    setToday(todayName());
+  }, []);
+
   /* Nothing that differs between the demo and a real account renders until the
      identity is known, so a signed-in person never sees a flash of Maya. */
   useEffect(() => {
@@ -83,9 +101,6 @@ export default function Home() {
     })();
   }, []);
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const today = todayName();
   const todayPlanned = week.find((d) => d.day === today);
   const isRestDay = todayPlanned?.kind === "rest";
   const peak = Math.max(1, ...week.map(planMinutes));
@@ -103,7 +118,7 @@ export default function Home() {
           <div className="relative mx-auto max-w-3xl lg:max-w-5xl">
             <img src="/brand/sante-mark.png" alt="Santé" className="-ml-3 w-32 sm:w-36 lg:hidden" />
             <h1 className="mt-2 font-display text-4xl leading-tight sm:text-5xl">
-              {name ? `${greeting}, ${name}` : greeting}
+              {greeting ? (name ? `${greeting}, ${name}` : greeting) : "\u00A0"}
             </h1>
 
             <div className="mt-8 sm:flex sm:items-center sm:gap-10">

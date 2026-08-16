@@ -56,7 +56,7 @@ export default function Landing() {
             </Link>
           </div>
           <p className="mt-3 text-sm text-slate">
-            No sign-up. Opens as Maya, a fictional user, with a plan already in it.
+            The demo needs no account. It opens as Maya, with a week already in it.
           </p>
         </div>
       </section>

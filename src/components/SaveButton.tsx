@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react";
 
 /**
- * Saving lives in the browser.
- *
- * A saved list is a convenience, not a record worth a table and a migration
- * during a sprint. If it ever becomes one, this is the single place to change.
+ * Saving, at the level people actually think in: whole sessions, not
+ * individual movements. Kept in the browser, which is the right weight for a
+ * favourites list.
  */
-const KEY = "sante-saved";
+const KEY = "sante-saved-workouts";
 
 export function readSaved(): string[] {
   try {
@@ -18,30 +17,29 @@ export function readSaved(): string[] {
   }
 }
 
-export default function SaveButton({ movementId }: { movementId: string }) {
+export default function SaveButton({ workoutId }: { workoutId: string }) {
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => setSaved(readSaved().includes(movementId)), [movementId]);
+  useEffect(() => setSaved(readSaved().includes(workoutId)), [workoutId]);
 
   function toggle() {
     const list = readSaved();
-    const next = list.includes(movementId)
-      ? list.filter((id) => id !== movementId)
-      : [...list, movementId];
+    const next = list.includes(workoutId)
+      ? list.filter((id) => id !== workoutId)
+      : [...list, workoutId];
     try {
       localStorage.setItem(KEY, JSON.stringify(next));
     } catch {}
-    setSaved(next.includes(movementId));
+    setSaved(next.includes(workoutId));
   }
 
   return (
     <button
       onClick={toggle}
       aria-pressed={saved}
-      aria-label={saved ? `Remove ${movementId} from saved` : `Save ${movementId}`}
       className={
-        "shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ring-1 " +
-        (saved ? "bg-moss/30 ring-transparent" : "bg-canvas ring-ink/15")
+        "shrink-0 rounded-2xl px-5 py-3.5 font-bold ring-1 " +
+        (saved ? "bg-moss/30 ring-transparent" : "bg-surface ring-ink/15")
       }
     >
       {saved ? "✓ Saved" : "Save"}

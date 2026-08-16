@@ -1,0 +1,237 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  collectionById,
+  workoutById,
+  workoutMovements,
+} from "@/lib/workouts";
+import { howToUrl } from "@/lib/demo-data";
+import { addToDay, loadWeek, todayName, type PlannedDay } from "@/lib/week";
+import AppNav from "@/components/AppNav";
+import { Blob, Sprig } from "@/components/BrandShapes";
+import SaveButton from "@/components/SaveButton";
+
+/**
+ * A workout, as a real page.
+ *
+ * Everything someone needs to decide whether today is the day for it: what it
+ * asks, what it needs, what is in it, and three things they can do about it.
+ */
+export default function WorkoutDetail() {
+  const params = useParams<{ id: string }>();
+  const workout = workoutById(params.id);
+  const [week, setWeek] = useState<PlannedDay[]>([]);
+  const [added, setAdded] = useState<string | null>(null);
+
+  useEffect(() => setWeek(loadWeek()), []);
+
+  if (!workout) {
+    return (
+      <>
+        <main className="mx-auto max-w-3xl px-5 py-10 lg:pl-56">
+          <p className="text-ink-soft">That session does not exist.</p>
+          <Link href="/explore" className="mt-4 inline-block underline">
+            Back to Explore
+          </Link>
+        </main>
+        <AppNav />
+      </>
+    );
+  }
+
+  const blocks = workoutMovements(workout);
+  const collections = workout.collection_ids
+    .map(collectionById)
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
+
+  return (
+    <>
+      <main className="pb-36 lg:pb-10 lg:pl-56">
+        {/* Hero */}
+        <section className="relative overflow-hidden bg-moss/25 px-5 pb-10 pt-10">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-16 text-moss/40">
+            <Blob size={300} />
+          </div>
+          <div className="relative mx-auto max-w-3xl">
+            <Link href="/explore" className="text-sm text-slate underline">
+              Explore
+            </Link>
+
+            <h1 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">
+              {workout.title}
+            </h1>
+            <p className="mt-3 max-w-lg text-lg text-ink-soft">{workout.description}</p>
+
+            <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
+              {[
+                ["Duration", `${workout.duration_minutes} min`],
+                ["Intensity", workout.intensity],
+                ["Movements", String(workout.blocks.length)],
+                ["Sensory load", workout.sensory_load],
+                ["Equipment", workout.equipment.length ? workout.equipment.join(", ") : "None"],
+                ["Where", workout.environment.join(", ")],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
+                    {label}
+                  </dt>
+                  <dd className="mt-0.5 font-mono text-sm capitalize">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-3xl px-5">
+          {/* Adapt CTA, the one that matters most */}
+          <section className="-mt-5 rounded-[24px] bg-surface p-6 shadow-[0_1px_2px_rgba(47,58,51,0.04),0_20px_50px_-32px_rgba(47,58,51,0.35)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-display text-2xl">Feeling different today?</p>
+                <p className="mt-1 max-w-sm text-ink-soft">
+                  Check in and Santé will reshape this session around the day you are actually
+                  having.
+                </p>
+              </div>
+              <span aria-hidden="true" className="shrink-0 text-moss">
+                <Sprig size={38} />
+              </span>
+            </div>
+            <Link
+              href="/today"
+              className="mt-4 inline-block rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
+            >
+              Adapt this session
+            </Link>
+          </section>
+
+          <p className="mt-7 max-w-lg text-ink-soft">{workout.intent}</p>
+
+          {/* What is in it */}
+          <section className="mt-8">
+            <h2 className="font-display text-2xl">What is in it</h2>
+            <ol className="mt-4 grid gap-2">
+              {blocks.map(({ movement, block }, i) => (
+                <li
+                  key={movement.id + i}
+                  className="rounded-[20px] bg-surface p-5 ring-1 ring-ink/10"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-xs text-slate">{i + 1}</p>
+                      <h3 className="mt-0.5 font-display text-xl">{movement.name}</h3>
+                      <p className="mt-1 font-mono text-sm text-moss-deep">
+                        {block.prescription}
+                      </p>
+                    </div>
+                    <a
+                      href={howToUrl(movement)}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`How to do ${movement.name}`}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-canvas font-bold text-ink-soft ring-1 ring-ink/15"
+                    >
+                      ?
+                    </a>
+                  </div>
+                  <p className="mt-2 text-sm text-ink-soft">{movement.instructions}</p>
+                  {block.rest_seconds > 0 && (
+                    <p className="mt-2 font-mono text-xs text-slate">
+                      then {block.rest_seconds}s rest
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {/* Add to a day */}
+          <section className="mt-8 rounded-[24px] bg-lavender/30 p-6">
+            <h2 className="font-display text-2xl">Put it in your week</h2>
+            <p className="mt-1 text-ink-soft">
+              It becomes that day&rsquo;s intended session, and it can still flex on the day.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {week.map((d) => (
+                <button
+                  key={d.day}
+                  onClick={() => {
+                    setWeek(addToDay(d.day, workout));
+                    setAdded(d.day);
+                  }}
+                  className={
+                    "rounded-full px-4 py-2 text-sm ring-1 " +
+                    (added === d.day
+                      ? "bg-moss/40 font-bold ring-transparent"
+                      : "bg-surface ring-ink/15 hover:ring-ink/30")
+                  }
+                >
+                  {added === d.day && <span aria-hidden="true">✓ </span>}
+                  {d.day.slice(0, 3)}
+                  {d.day === todayName() && " (today)"}
+                </button>
+              ))}
+            </div>
+            {added && (
+              <p className="mt-3 text-sm" role="status">
+                Added to {added}.{" "}
+                <Link href="/plan" className="underline">
+                  See your week
+                </Link>
+              </p>
+            )}
+          </section>
+
+          {collections.length > 0 && (
+            <section className="mt-8">
+              <h2 className="font-display text-2xl">Also in</h2>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {collections.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/explore/${c.id}`}
+                    className="rounded-full bg-surface px-4 py-2 text-sm ring-1 ring-ink/15"
+                  >
+                    {c.title}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+
+        {/* Sticky start, mobile only, one clear action */}
+        <div
+          className="fixed inset-x-0 bottom-[60px] z-20 border-t border-ink/10 bg-surface/95 px-5 py-3 backdrop-blur lg:hidden"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
+        >
+          <div className="mx-auto flex max-w-3xl items-center gap-3">
+            <SaveButton workoutId={workout.id} />
+            <Link
+              href={`/today?start=${workout.id}`}
+              className="flex-1 rounded-2xl bg-coral px-5 py-3.5 text-center font-bold text-coral-on"
+            >
+              Start session
+            </Link>
+          </div>
+        </div>
+
+        <div className="mx-auto hidden max-w-3xl px-5 pt-8 lg:block">
+          <div className="flex items-center gap-3">
+            <SaveButton workoutId={workout.id} />
+            <Link
+              href={`/today?start=${workout.id}`}
+              className="rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
+            >
+              Start session
+            </Link>
+          </div>
+        </div>
+      </main>
+      <AppNav />
+    </>
+  );
+}

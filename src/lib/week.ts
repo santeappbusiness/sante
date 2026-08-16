@@ -1,5 +1,6 @@
 import type { DailyPlan } from "@/types/domain";
 import { MOVEMENTS, movementById } from "./demo-data";
+import type { Workout } from "./workouts";
 
 /**
  * The week.
@@ -19,6 +20,8 @@ export type PlannedDay = {
   minutes: number;
   intensity: DailyPlan["intensity"];
   movement_ids: string[];
+  /** Set when the day came from a workout in the library. */
+  workout_id?: string;
 };
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -112,6 +115,25 @@ export function proposeRebalance(
     before: week,
     after,
   };
+}
+
+/** Schedule a workout onto a day. Returns the updated week. */
+export function addToDay(day: string, workout: Workout): PlannedDay[] {
+  const week = loadWeek().map((d) =>
+    d.day === day
+      ? {
+          ...d,
+          kind: "session" as DayKind,
+          title: workout.title,
+          minutes: workout.duration_minutes,
+          intensity: workout.intensity,
+          workout_id: workout.id,
+          movement_ids: workout.blocks.map((b) => b.movement_id),
+        }
+      : d
+  );
+  saveWeek(week);
+  return week;
 }
 
 export const ALL_MOVEMENTS = MOVEMENTS;

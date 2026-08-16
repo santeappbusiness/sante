@@ -1,87 +1,216 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getSupabase, googleAuthEnabled } from "@/lib/supabase/client";
+import Link from "next/link";
+import { useState } from "react";
+import { getSupabase } from "@/lib/supabase/client";
+import { Blob, Flower } from "@/components/BrandShapes";
 
 /**
- * Sign in.
+ * Sign in and sign up, one screen.
  *
- * The Google button only renders when Google is actually configured. A button
- * that looks real and throws when a judge taps it is worse than no button, so
- * this is gated rather than hopeful.
+ * Email and password, because that is what people have. No provider buttons,
+ * no third-party consent screen, nothing to configure before someone can use
+ * the product.
+ *
+ * Supabase errors are translated: "Invalid login credentials" tells a person
+ * nothing they can act on.
  */
+
+type Mode = "in" | "up";
+
+function friendlyError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login")) return "That email and password do not match. Try again?";
+  if (m.includes("already registered")) return "There is already an account with that email. Sign in instead?";
+  if (m.includes("password")) return "Passwords need at least six characters.";
+  if (m.includes("email")) return "That does not look like an email address.";
+  return "Something went wrong on our side. Try once more.";
+}
+
 export default function SignIn() {
+  const [mode, setMode] = useState<Mode>("in");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [origin, setOrigin] = useState("");
 
-  useEffect(() => setOrigin(window.location.origin), []);
-
-  async function withGoogle() {
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
     const sb = getSupabase();
     if (!sb) return;
+
     setBusy(true);
     setError(null);
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${origin}/auth/callback` },
-    });
-    if (error) {
-      /* Never show the raw provider error. */
-      setError("Google sign-in is not available right now. You can still try the demo.");
-      setBusy(false);
+    setNotice(null);
+
+    if (mode === "up") {
+      const { data, error } = await sb.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name } },
+      });
+      if (error) {
+        setError(friendlyError(error.message));
+        setBusy(false);
+        return;
+      }
+      /* Some projects require email confirmation, some do not. Handle both
+         rather than assuming and stranding people on a blank screen. */
+      if (!data.session) {
+        setNotice("Check your email to confirm the account, then sign in.");
+        setMode("in");
+        setBusy(false);
+        return;
+      }
+      await fetch("/api/bootstrap", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+      }).catch(() => {});
+      window.location.replace("/onboarding");
+      return;
     }
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError(friendlyError(error.message));
+      setBusy(false);
+      return;
+    }
+    await fetch("/api/bootstrap", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${data.session?.access_token}` },
+    }).catch(() => {});
+    window.location.replace("/home");
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
-      <img src="/brand/sante-logo.png" alt="Santé" className="-ml-4 w-44" />
-
-      <h1 className="mt-4 text-4xl leading-tight">Welcome back.</h1>
-      <p className="mt-2 text-ink-soft">
-        Pick up where you left off, or look around first.
-      </p>
-
-      <div className="mt-9 grid gap-3">
-        {googleAuthEnabled && (
-          <button
-            onClick={withGoogle}
-            disabled={busy}
-            className="flex items-center justify-center gap-3 rounded-xl bg-surface px-5 py-4 font-bold ring-1 ring-ink/15 disabled:opacity-60"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-              <path fill="#4285F4" d="M17.6 9.2c0-.6-.1-1.2-.2-1.8H9v3.5h4.8a4.1 4.1 0 0 1-1.8 2.7v2.2h2.9c1.7-1.6 2.7-3.9 2.7-6.6Z" />
-              <path fill="#34A853" d="M9 18c2.4 0 4.5-.8 6-2.2l-2.9-2.2c-.8.5-1.8.9-3.1.9-2.4 0-4.4-1.6-5.1-3.8H.9v2.3A9 9 0 0 0 9 18Z" />
-              <path fill="#FBBC05" d="M3.9 10.7a5.4 5.4 0 0 1 0-3.4V5H.9a9 9 0 0 0 0 8l3-2.3Z" />
-              <path fill="#EA4335" d="M9 3.6c1.3 0 2.5.5 3.4 1.3l2.6-2.6A9 9 0 0 0 .9 5l3 2.3C4.6 5.2 6.6 3.6 9 3.6Z" />
-            </svg>
-            {busy ? "Opening Google" : "Continue with Google"}
-          </button>
-        )}
-
-        <a
-          href="/today"
-          className="rounded-xl bg-coral px-5 py-4 text-center font-bold text-coral-on"
-        >
-          Try the demo
-        </a>
+    <main className="relative min-h-screen overflow-hidden">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 text-moss/25">
+        <Blob size={420} />
+      </div>
+      <div aria-hidden="true" className="pointer-events-none absolute -left-16 bottom-0 hidden text-lavender/40 sm:block">
+        <Blob size={280} />
       </div>
 
-      {error && (
-        <p className="mt-4 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
-          {error}
-        </p>
-      )}
+      <div className="relative mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
+        <img src="/brand/sante-logo.png" alt="Santé" className="-ml-4 w-44" />
 
-      {!googleAuthEnabled && (
-        <p className="mt-6 text-sm text-slate">
-          Santé opens as Maya, a fictional demo user, with nothing to sign up for.
+        <h1 className="mt-5 font-display text-4xl leading-tight">
+          {mode === "in" ? "Welcome back." : "Make a start."}
+        </h1>
+        <p className="mt-2 text-ink-soft">
+          {mode === "in"
+            ? "Pick up where you left off."
+            : "A plan that can flex takes about a minute to set up."}
         </p>
-      )}
 
-      <a href="/" className="mt-8 text-sm text-slate underline">
-        Back
-      </a>
+        <form onSubmit={submit} className="mt-8 grid gap-3">
+          {mode === "up" && (
+            <div className="field">
+              <label htmlFor="name" className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
+                What should we call you?
+              </label>
+              <input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="given-name"
+                required
+                className="mt-1 w-full rounded-2xl bg-surface px-5 py-3.5 ring-1 ring-ink/15"
+              />
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="email" className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+              className="mt-1 w-full rounded-2xl bg-surface px-5 py-3.5 ring-1 ring-ink/15"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === "in" ? "current-password" : "new-password"}
+              minLength={6}
+              required
+              className="mt-1 w-full rounded-2xl bg-surface px-5 py-3.5 ring-1 ring-ink/15"
+            />
+            {mode === "up" && (
+              <p className="mt-1 text-xs text-slate">At least six characters.</p>
+            )}
+          </div>
+
+          {error && (
+            <p role="alert" className="rounded-2xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
+              {error}
+            </p>
+          )}
+          {notice && (
+            <p role="status" className="rounded-2xl bg-moss/25 px-4 py-3 text-sm">
+              {notice}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="mt-1 rounded-2xl bg-coral px-6 py-4 text-lg font-bold text-coral-on disabled:opacity-60"
+          >
+            {busy ? "One moment" : mode === "in" ? "Sign in" : "Create account"}
+          </button>
+        </form>
+
+        <button
+          onClick={() => {
+            setMode(mode === "in" ? "up" : "in");
+            setError(null);
+          }}
+          className="mt-4 text-sm text-ink-soft underline underline-offset-4"
+        >
+          {mode === "in" ? "No account yet? Create one" : "Already have an account? Sign in"}
+        </button>
+
+        <div className="mt-10 border-t border-ink/10 pt-6">
+          <div className="flex items-center gap-3">
+            <span aria-hidden="true" className="text-lavender">
+              <Flower size={34} />
+            </span>
+            <div>
+              <p className="font-bold">Just looking?</p>
+              <p className="text-sm text-ink-soft">
+                Open Santé as Maya, with a week already in it.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/home"
+            className="mt-4 block rounded-2xl bg-surface px-6 py-3.5 text-center font-bold ring-1 ring-ink/15"
+          >
+            Try the demo
+          </Link>
+        </div>
+
+        <Link href="/" className="mt-8 text-sm text-slate underline">
+          Back
+        </Link>
+      </div>
     </main>
   );
 }

@@ -1,96 +1,128 @@
 "use client";
 
 import Link from "next/link";
-import { COLLECTIONS, collectionMovements } from "@/lib/demo-data";
+import { useMemo, useState } from "react";
+import { COLLECTIONS, WORKOUTS, workoutsInCollection } from "@/lib/workouts";
+import { WorkoutCard } from "@/components/WorkoutCard";
 import AppNav from "@/components/AppNav";
-import { Arch, Blob, Flower, Sprig, Waves, Asterisk } from "@/components/BrandShapes";
+import { Blob } from "@/components/BrandShapes";
 
 /**
- * Explore, organised by how a day feels rather than by muscle group.
+ * Explore.
  *
- * Collections are a point of view: "low energy days", "nothing on the floor".
- * That is the whole difference between a wellness product and a filter over a
- * database table.
+ * Workouts first, collections as the way through them. Previously a collection
+ * opened onto a list of individual movements, which made a five minute
+ * collection contain eighty minutes of exercises and made the whole app read as
+ * a database with a nice font.
  */
-
-const ACCENT: Record<string, string> = {
-  moss: "bg-moss/25",
-  lavender: "bg-lavender/40",
-  coral: "bg-coral/15",
-  slate: "bg-surface ring-1 ring-ink/10",
-};
-
-/* A different shape per collection, so the grid does not read as six of the
-   same tile with different words on them. */
-const MOTIF = [Flower, Waves, Asterisk, Arch, Sprig, Blob];
-const MOTIF_TONE = [
-  "text-moss/45",
-  "text-slate/30",
-  "text-coral/30",
-  "text-moss-deep/30",
-  "text-moss/50",
-  "text-lavender/70",
-];
-
 export default function Explore() {
+  const [query, setQuery] = useState("");
+
+  const featured = useMemo(() => WORKOUTS.filter((w) => w.featured), []);
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return null;
+    return WORKOUTS.filter((w) =>
+      (w.title + " " + w.description + " " + w.intent).toLowerCase().includes(q)
+    );
+  }, [query]);
+
   return (
     <>
-      <main className="mx-auto max-w-3xl px-5 py-10 pb-28 lg:pb-10 lg:pl-56">
-        <h1 className="font-display text-4xl leading-tight sm:text-5xl">Explore</h1>
-        <p className="mt-2 max-w-md text-lg text-ink-soft">
-          Grouped by how a day feels, not by what a muscle is called.
-        </p>
+      <main className="pb-28 lg:pb-10 lg:pl-56">
+        <section className="relative overflow-hidden bg-moss/20 px-5 pb-10 pt-10">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 text-moss/40">
+            <Blob size={300} />
+          </div>
+          <div className="relative mx-auto max-w-4xl">
+            <h1 className="font-display text-4xl leading-tight sm:text-5xl">Explore</h1>
+            <p className="mt-2 max-w-md text-lg text-ink-soft">
+              Sessions grouped by how a day feels, not by what a muscle is called.
+            </p>
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-2">
-          {COLLECTIONS.map((c, i) => {
-            const count = collectionMovements(c.id).length;
-            const Motif = MOTIF[i % MOTIF.length];
-            /* The first tile runs full width: a grid with no emphasis reads as
-               a list of equals, and these are not equals. */
-            const wide = i === 0;
-            return (
-              <Link
-                key={c.id}
-                href={`/explore/${c.id}`}
-                className={
-                  "group relative block overflow-hidden rounded-[24px] p-6 transition-transform " +
-                  ACCENT[c.accent] +
-                  (wide ? " sm:col-span-2 sm:p-8" : "")
-                }
-              >
-                <div
-                  aria-hidden="true"
-                  className={
-                    "pointer-events-none absolute " +
-                    (wide ? "-right-6 -top-8" : "-bottom-6 -right-6") +
-                    " " +
-                    MOTIF_TONE[i % MOTIF_TONE.length]
-                  }
-                >
-                  <Motif size={wide ? 150 : 110} id={c.id} />
-                </div>
+            <label className="sr-only" htmlFor="explore-search">
+              Search workouts
+            </label>
+            <input
+              id="explore-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search sessions"
+              className="mt-6 w-full max-w-md rounded-2xl bg-surface px-5 py-3.5 ring-1 ring-ink/10 placeholder:text-slate/70"
+            />
+          </div>
+        </section>
 
-                <h2
-                  className={
-                    "relative font-display leading-tight " +
-                    (wide ? "text-3xl sm:text-4xl" : "text-2xl")
-                  }
-                >
-                  {c.title}
-                </h2>
-                <p className="relative mt-1.5 max-w-sm text-sm text-ink-soft">{c.blurb}</p>
-                <p className="relative mt-4 font-mono text-xs text-slate">
-                  {count} movements
+        <div className="mx-auto max-w-4xl px-5">
+          {results ? (
+            <section className="mt-8">
+              <h2 className="font-display text-2xl">
+                {results.length} session{results.length === 1 ? "" : "s"}
+              </h2>
+              {results.length === 0 ? (
+                <p className="mt-3 rounded-2xl bg-surface p-6 text-ink-soft ring-1 ring-ink/10">
+                  Nothing matches that. Try a feeling rather than a body part: quiet, gentle,
+                  five minutes.
                 </p>
-              </Link>
-            );
-          })}
-        </div>
+              ) : (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {results.map((w, i) => (
+                    <WorkoutCard key={w.id} workout={w} index={i} />
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : (
+            <>
+              <section className="-mt-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {featured.slice(0, 2).map((w, i) => (
+                    <WorkoutCard key={w.id} workout={w} size="featured" index={i} />
+                  ))}
+                </div>
+              </section>
 
-        <p className="mt-8 max-w-lg text-xs leading-relaxed text-slate">
-          Anything here can be adapted to today. Nothing in Santé assumes you should be able to
-          do a session just because it is listed.
-        </p>
+              <section className="mt-10">
+                <h2 className="font-display text-2xl">Collections</h2>
+                <p className="mt-1 text-ink-soft">Every one holds sessions, not exercises.</p>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {COLLECTIONS.map((c) => {
+                    const count = workoutsInCollection(c.id).length;
+                    if (count === 0) return null;
+                    return (
+                      <Link
+                        key={c.id}
+                        href={`/explore/${c.id}`}
+                        className="rounded-2xl bg-surface px-5 py-4 ring-1 ring-ink/10 hover:ring-ink/25"
+                      >
+                        <p className="font-display text-lg leading-tight">{c.title}</p>
+                        <p className="mt-1 text-sm text-ink-soft">{c.blurb}</p>
+                        <p className="mt-2 font-mono text-xs text-slate">
+                          {count} session{count === 1 ? "" : "s"}
+                        </p>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="mt-10">
+                <h2 className="font-display text-2xl">Everything</h2>
+                <div className="mt-4 grid gap-2">
+                  {WORKOUTS.map((w, i) => (
+                    <WorkoutCard key={w.id} workout={w} size="row" index={i} />
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+
+          <p className="mt-10 max-w-lg text-xs leading-relaxed text-slate">
+            Any session here can be adapted to today. Nothing in Santé assumes you should be
+            able to do something just because it is listed.
+          </p>
+        </div>
       </main>
       <AppNav />
     </>

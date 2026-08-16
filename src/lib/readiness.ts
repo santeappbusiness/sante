@@ -34,6 +34,7 @@ export function computeReadiness(
       target_minutes: 5,
       max_movements: 1,
       excluded_tags: [],
+      prefer_quiet: profile.neurodivergent_mode,
       drivers: [],
     };
   }
@@ -90,6 +91,21 @@ export function computeReadiness(
     if (!excluded_tags.includes("jumping")) excluded_tags.push("jumping");
   }
 
+  /* Calm mode, as a constraint rather than a request.
+     It used to be a single line appended to the model's prompt, which meant it
+     was a preference the model could ignore, the validator had nothing to check
+     it against, and the fallback path ignored it completely. Here it binds:
+     fewer transitions to hold in your head, nothing that lands hard, and quiet
+     options preferred over equally permitted noisy ones.
+
+     Deliberately not a shorter session. Calm mode is about load, not duration,
+     and a long quiet session can be exactly right. */
+  if (profile.neurodivergent_mode) {
+    max_movements = Math.min(max_movements, 3);
+    if (!excluded_tags.includes("jumping")) excluded_tags.push("jumping");
+    drivers.push("you use calm mode, so this keeps to fewer, quieter movements");
+  }
+
   /* Say so when someone reports a good day. Without this the only sentence the
      model ever sees is a flat "feeling steady", and it plays safe by trimming a
      session that did not need trimming. A good day is information too. */
@@ -106,6 +122,7 @@ export function computeReadiness(
     target_minutes: clamp(target_minutes, 5, 60),
     max_movements: clamp(max_movements, 1, 8),
     excluded_tags,
+    prefer_quiet: profile.neurodivergent_mode,
     drivers,
   };
 }
@@ -114,11 +131,29 @@ export function computeReadiness(
  *  so an out-of-bounds movement is impossible rather than merely discouraged. */
 export function allowedMovements(result: ReadinessResult): Movement[] {
   const rank = { low: 1, moderate: 2, high: 3 } as const;
-  return MOVEMENTS.filter(
+  const pool = MOVEMENTS.filter(
     (m) =>
       rank[m.intensity] <= rank[result.max_intensity] &&
       !m.tags.some((t) => result.excluded_tags.includes(t))
   );
+
+  /* In calm mode the quiet options come first. The model sees this list in
+     order and the fallback walks it in order, so the preference costs nothing
+     and takes effect on both paths. Nothing is removed: a quiet day is still
+     allowed to include something demanding if that is what fits.
+
+     Longest first inside each group, because calm mode caps how many movements
+     someone has to hold in their head, not how long they are allowed to move.
+     Taking the three shortest quiet options turned a thirty minute allowance
+     into thirteen minutes, which is the trimming nobody asked for. */
+  if (!result.prefer_quiet) return pool;
+  return [...pool].sort(
+    (a, b) => Number(isQuiet(b)) - Number(isQuiet(a)) || b.minutes - a.minutes
+  );
+}
+
+function isQuiet(m: Movement): boolean {
+  return m.tags.includes("quiet") || m.tags.includes("breathing");
 }
 
 /**
@@ -131,11 +166,15 @@ export function fallbackPlan(result: ReadinessResult, original: DailyPlan): Dail
   let minutes = 0;
 
   /* Prefer movements already in today's plan, so the adaptation still feels
-     like the same session rather than a different one. */
-  const preferred = [
-    ...pool.filter((m) => original.movements.some((o) => o.id === m.id)),
-    ...pool.filter((m) => !original.movements.some((o) => o.id === m.id)),
-  ];
+     like the same session rather than a different one. In calm mode that is
+     the wrong instinct: keeping the familiar noisy movement is exactly what
+     someone asked us not to do, so the pool's quiet-first order stands. */
+  const preferred = result.prefer_quiet
+    ? pool
+    : [
+        ...pool.filter((m) => original.movements.some((o) => o.id === m.id)),
+        ...pool.filter((m) => !original.movements.some((o) => o.id === m.id)),
+      ];
 
   for (const m of preferred) {
     if (picked.length >= result.max_movements) break;

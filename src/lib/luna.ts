@@ -7,7 +7,6 @@ import {
   type FeedbackVerdict,
   type Movement,
   type ReadinessResult,
-  type UserProfile,
 } from "@/types/domain";
 import { allowedMovements, fallbackPlan } from "./readiness";
 import { movementById } from "./demo-data";
@@ -26,8 +25,13 @@ export const LUNA_MODEL = process.env.LUNA_MODEL || "gpt-5.6-luna";
  * and the model's reasoning items are never surfaced.
  */
 
+/* No profile here on purpose. Everything about the person that may shape a
+   session has already been absorbed into the constraints: avoided movements
+   into excluded_tags, remembered length into target_minutes, calm mode into
+   the movement limit and prefer_quiet. The model is handed limits, not a
+   person, which is both the privacy story and the reason it cannot reason its
+   way around a preference. */
 type RunArgs = {
-  profile: UserProfile;
   plan: DailyPlan;
   result: ReadinessResult;
   recentFeedback: FeedbackVerdict[];
@@ -141,7 +145,6 @@ function violations(candidate: AdaptedPlan, result: ReadinessResult, pool: Movem
 }
 
 export async function runAdaptation({
-  profile,
   plan,
   result,
   recentFeedback,
@@ -167,8 +170,8 @@ export async function runAdaptation({
     `Today's plan: ${plan.title}, ${plan.total_minutes} minutes, ${plan.intensity} intensity, ${plan.movements.length} movements (${plan.movements.map((m) => m.id).join(", ")}).`,
     `They reported: ${result.drivers.join("; ")}.`,
     `Constraints: maximum intensity ${result.max_intensity}, target ${result.target_minutes} minutes, at most ${result.max_movements} movements.`,
-    profile.neurodivergent_mode
-      ? "This person uses calm mode, so prefer fewer movements and the quietest options."
+    result.prefer_quiet
+      ? "This person uses calm mode. The options you are given are already ordered quietest first, and the movement limit above is already tightened for it. Stay near the top of that list."
       : "",
   ]
     .filter(Boolean)

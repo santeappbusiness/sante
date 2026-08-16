@@ -210,7 +210,6 @@ export async function POST(req: NextRequest) {
         const recentFeedbackCount = recentFeedback.length;
 
         const outcome = await runAdaptation({
-          profile,
           plan,
           result,
           recentFeedback,

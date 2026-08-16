@@ -55,6 +55,12 @@ export const readinessResultSchema = z.object({
   max_movements: z.number().int().min(1).max(8),
   /** Movement tags the plan must avoid, e.g. "jumping", "floor_work". */
   excluded_tags: z.array(z.string()),
+  /**
+   * Calm mode reached the constraints, so quiet movements are preferred over
+   * equally permitted noisy ones. A preference rather than an exclusion: a
+   * quiet day should still be allowed to be a strong one.
+   */
+  prefer_quiet: z.boolean().default(false),
   /** Short, plain-language reasons shown under "Why this changed". */
   drivers: z.array(z.string()),
 });

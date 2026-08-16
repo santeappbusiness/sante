@@ -198,7 +198,7 @@ export default function Landing() {
               },
               {
                 title: "Calm mode",
-                body: "Larger text, no motion, fewer choices, shorter instructions, quieter surfaces. It changes the session too, not only the interface.",
+                body: "Larger text, no motion, fewer choices, shorter instructions, quieter surfaces. It also caps how many movements a session can hold and puts the quiet ones first, in our own code, so it holds even when the AI is switched off.",
                 tint: "bg-lavender/50",
               },
             ].map((f) => (

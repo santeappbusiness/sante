@@ -63,8 +63,8 @@ you are working with), Dua (brand/video), Jue (ops/submission).
 - **Calm mode**: the neurodivergent-friendly mode. Called `nd_mode` in the
   database, `neurodivergent_mode` on the domain type, "Calm mode" in every
   user-facing string. Do not rename it back. The two field names are translated
-  deliberately in `src/app/api/adapt/route.ts`; that is not a bug, but see 6.6
-  for what is.
+  deliberately in `src/app/api/adapt/route.ts`; that is not a bug. See 6.6 for
+  how Calm mode reaches the session.
 
 ---
 
@@ -245,9 +245,9 @@ Verified live on `sante-chi.vercel.app` as of the last session:
   patterns, recent days.
 - Profile: every setting is live and used; "What Santé remembers" lists each
   fact with its source.
-- Calm mode: reshapes the interface, and biases which workouts get recommended.
-  It does **not** yet constrain the adapted session. See 6.6, which is a real
-  gap between what we claim and what the code does.
+- Calm mode: reshapes the interface, biases which workouts get recommended, and
+  constrains the adapted session in our own deterministic code, so it holds on
+  the fallback path too. See 6.6 for how, and for what not to undo.
 - Email/password auth. **No Google auth.** This was explicitly killed. Do not
   add provider buttons back.
 - Demo seeding is automatic, server-side, and idempotent. Nothing manual is
@@ -441,46 +441,48 @@ scenario, then fix them.
 - No `console.log` left in shipped code.
 - Dead code and unused exports.
 
-### 6.6 Calm mode does not reach the session as far as we claim
+### 6.6 Calm mode as a constraint (done, but know how it works)
 
-We say, on the landing page and in the pitch, that Calm mode changes the session
-and not only the interface. That is currently a stretch. Two separate gaps, both
-worth fixing because this is one of our strongest Wellness-track claims and a
-judge who checks will find it.
+This was a real gap and it is fixed. Recorded here because the shape of the fix
+is the shape every future preference should take.
 
-**It is a prompt hint, not a constraint.** `computeReadiness` in
-`src/lib/readiness.ts` never reads `neurodivergent_mode`, so Calm mode does not
-change `target_minutes`, `max_movements`, `max_intensity`, or `excluded_tags`.
-The only effect on the session is one sentence appended to Luna's user message
-in `src/lib/luna.ts` ("prefer fewer movements and the quietest options"). Luna
-can ignore it and the re-validation will not notice, because the constraints it
-checks against never encoded Calm mode. On the deterministic fallback path the
-effect is zero.
+**What was wrong.** Calm mode used to be one sentence appended to Luna's prompt.
+`computeReadiness` never read the flag, so it changed no constraint, the
+re-validation had nothing to check it against, and the deterministic fallback
+ignored it entirely. Separately, the toggle on Today was plain React state, so a
+person who turned it on there got the interface change while the server kept
+reading a stale `nd_mode` and Luna never heard about it. That was masked in the
+demo because `MAYA.neurodivergent_mode` is `true`.
 
-The fix is to make it a real constraint: in `computeReadiness`, when the profile
-has Calm mode on, cap `max_movements`, bias `target_minutes` down, and add the
-noisy tags to `excluded_tags`. Then the claim is enforced by our own code rather
-than requested politely of a model, the fallback path honours it too, and it
-becomes one more thing the AI cannot widen.
+**What it does now.** In `computeReadiness`, Calm mode caps `max_movements` at
+three, pushes `jumping` into `excluded_tags`, sets `prefer_quiet` on the result,
+and adds its own line to `drivers` so the person sees why. `allowedMovements`
+orders the pool quiet-first and, within that, longest-first. `fallbackPlan`
+drops its usual keep-the-familiar-movement heuristic, because keeping the
+familiar noisy movement is the one thing someone in Calm mode did not ask for.
+The Today toggle now writes `nd_mode` to the profile.
 
-**The Today toggle never reaches the server.** `src/app/today/page.tsx` renders
-`<CalmModeToggle value={nd} onChange={setNd} compact />` where `setNd` is plain
-React state. `CalmMode.tsx` writes localStorage and the `data-nd` attribute and
-nothing else. Only `src/app/profile/page.tsx` persists, via
-`patch({ nd_mode: v })`. So a person who turns Calm mode on from the Today
-header gets the whole interface change while `/api/adapt` still reads the stale
-`nd_mode` from Postgres and Luna never hears about it.
+**Two decisions worth not undoing.**
 
-This is masked in the demo because `MAYA.neurodivergent_mode` is `true`, so the
-hint fires for anonymous visitors regardless. It only surfaces on a real signed
-up account, where `bootstrap` writes `nd_mode: false`. Fix by persisting from
-every toggle, not just the one on Profile.
+*It shortens the list, not the session.* Calm mode is about load, not duration,
+and a long quiet session can be exactly right. Capping the count while leaving
+`target_minutes` alone is deliberate.
+
+*Longest-first inside each group.* Without it, a movement cap plus a
+shortest-first walk turned a thirty minute allowance into thirteen minutes of
+quiet movements. That is the same trimming-nobody-asked-for bug that the
+good-day driver text was written to prevent. If you touch the ordering, re-check
+a good day in Calm mode against a good day without it.
 
 **Note for anyone re-checking this:** `nd_mode` (database column) and
 `neurodivergent_mode` (domain field) are translated on purpose in
 `src/app/api/adapt/route.ts`. That translation is correct and the field is not
-being dropped. The problem is what the flag does once it arrives, not whether it
-arrives.
+being dropped. It was never the bug.
+
+`runAdaptation` no longer takes a profile at all. Everything about a person that
+may shape a session is absorbed into the constraints before the model is
+reached, which is both the privacy story and the reason the model cannot reason
+its way around a preference. Keep it that way.
 
 ---
 

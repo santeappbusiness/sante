@@ -108,6 +108,19 @@ export default function Today() {
     })();
   }, []);
 
+  /* Calm mode has to reach the database, not just this tab. The adaptation is
+     built on the server from the stored profile, so a toggle that only changed
+     React state left the session exactly as noisy as before. */
+  const setCalm = useCallback(async (on: boolean) => {
+    setNd(on);
+    const sb = getSupabase();
+    if (!sb) return;
+    const { data } = await sb.auth.getSession();
+    const id = data.session?.user?.id;
+    if (!id) return;
+    await sb.from("profiles").update({ nd_mode: on }).eq("id", id);
+  }, []);
+
   const patch = useCallback(
     async (p: Partial<StoredSession>) => {
       setSession((prev) => (prev ? { ...prev, ...p } : prev));
@@ -247,7 +260,7 @@ export default function Today() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <CalmModeToggle value={nd} onChange={setNd} compact />
+          <CalmModeToggle value={nd} onChange={setCalm} compact />
           <button
             className="nd-secondary text-xs text-slate underline"
             onClick={async () => {

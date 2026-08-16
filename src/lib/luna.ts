@@ -154,6 +154,13 @@ export async function runAdaptation({
   emit,
   signal,
 }: RunArgs): Promise<RunOutcome> {
+  /* The gate runs in the route, before this is reachable. Checking again costs
+     nothing and means a future caller that skips the gate gets an error in the
+     log instead of two model calls and a plan for someone we told to rest. */
+  if (result.blocked) {
+    throw new Error("runAdaptation called on a blocked readiness result");
+  }
+
   const pool = allowedMovements(result);
 
   emit({

@@ -45,25 +45,58 @@ export const readinessCheckinSchema = z.object({
 
 export const intensitySchema = z.enum(["low", "moderate", "high"]);
 
-export const readinessResultSchema = z.object({
-  /** 0 to 100. Presentational only; the constraints below do the real work. */
-  score: z.number().int().min(0).max(100),
-  blocked: z.boolean(),
-  block_reason: z.string().optional(),
-  max_intensity: intensitySchema,
-  target_minutes: z.number().int().min(5).max(60),
-  max_movements: z.number().int().min(1).max(8),
-  /** Movement tags the plan must avoid, e.g. "jumping", "floor_work". */
-  excluded_tags: z.array(z.string()),
-  /**
-   * Calm mode reached the constraints, so quiet movements are preferred over
-   * equally permitted noisy ones. A preference rather than an exclusion: a
-   * quiet day should still be allowed to be a strong one.
-   */
-  prefer_quiet: z.boolean().default(false),
-  /** Short, plain-language reasons shown under "Why this changed". */
-  drivers: z.array(z.string()),
-});
+export const readinessResultSchema = z
+  .object({
+    /** 0 to 100. Presentational only; the constraints below do the real work. */
+    score: z.number().int().min(0).max(100),
+    blocked: z.boolean(),
+    block_reason: z.string().optional(),
+    max_intensity: intensitySchema,
+    /** 0 only on a blocked day, where nothing may be built at all. The floor
+     *  for a usable day is still 5, enforced below rather than here, because
+     *  the legal range genuinely depends on `blocked`. */
+    target_minutes: z.number().int().min(0).max(60),
+    max_movements: z.number().int().min(0).max(8),
+    /** Movement tags the plan must avoid, e.g. "jumping", "floor_work". */
+    excluded_tags: z.array(z.string()),
+    /**
+     * Calm mode reached the constraints, so quiet movements are preferred over
+     * equally permitted noisy ones. A preference rather than an exclusion: a
+     * quiet day should still be allowed to be a strong one.
+     */
+    prefer_quiet: z.boolean().default(false),
+    /** Short, plain-language reasons shown under "Why this changed". */
+    drivers: z.array(z.string()),
+  })
+  /* A blocked verdict must not describe a session anyone could build. Zeroes
+     are what make a forgotten `blocked` check produce nothing instead of a
+     short gentle session, so the shape has to hold them and nothing else. */
+  .superRefine((result, ctx) => {
+    if (result.blocked) {
+      if (result.target_minutes !== 0 || result.max_movements !== 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "a blocked result must carry no buildable session: target_minutes and max_movements are both 0",
+        });
+      }
+      return;
+    }
+    if (result.target_minutes < 5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["target_minutes"],
+        message: "a usable day is at least 5 minutes",
+      });
+    }
+    if (result.max_movements < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["max_movements"],
+        message: "a usable day has at least one movement",
+      });
+    }
+  });
 
 /* ------------------------------------------------------------------ *
  * Movements and plans

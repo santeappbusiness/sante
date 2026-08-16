@@ -24,15 +24,21 @@ export function computeReadiness(
   profile: UserProfile,
   plan: DailyPlan
 ): ReadinessResult {
-  /* 1. Red-flag gate. Runs before anything else and cannot be overridden. */
+  /* 1. Red-flag gate. Runs before anything else and cannot be overridden.
+
+     The zeroes matter as much as the flag does. These constraints used to
+     describe a five minute, one movement session, which meant any caller that
+     forgot to read `blocked` would quietly build one for a person reporting
+     chest pain. A blocked day now describes nothing buildable, so forgetting
+     the check produces an empty pool and a thrown error rather than a plan. */
   if (checkin.red_flags.length > 0) {
     return {
       score: 0,
       blocked: true,
       block_reason: RED_FLAG_MESSAGE,
       max_intensity: "low",
-      target_minutes: 5,
-      max_movements: 1,
+      target_minutes: 0,
+      max_movements: 0,
       excluded_tags: [],
       prefer_quiet: profile.neurodivergent_mode,
       drivers: [],
@@ -130,6 +136,11 @@ export function computeReadiness(
 /** The candidates the model is allowed to choose from. Filtering happens here,
  *  so an out-of-bounds movement is impossible rather than merely discouraged. */
 export function allowedMovements(result: ReadinessResult): Movement[] {
+  /* Nothing is permitted on a blocked day. Returning the low intensity
+     catalogue here is what would let a missed `blocked` check downstream find
+     something to build with. */
+  if (result.blocked) return [];
+
   const rank = { low: 1, moderate: 2, high: 3 } as const;
   const pool = MOVEMENTS.filter(
     (m) =>
@@ -161,6 +172,13 @@ function isQuiet(m: Movement): boolean {
  * invalid. The app has to work with the AI switched off, and this is how.
  */
 export function fallbackPlan(result: ReadinessResult, original: DailyPlan): DailyPlan {
+  /* The route returns before it reaches this on a blocked day. If that ever
+     stops being true, fail loudly here rather than handing back a session with
+     a reassuring sentence attached to it. */
+  if (result.blocked) {
+    throw new Error("fallbackPlan called on a blocked readiness result");
+  }
+
   const pool = allowedMovements(result);
   const picked: Movement[] = [];
   let minutes = 0;
@@ -183,7 +201,10 @@ export function fallbackPlan(result: ReadinessResult, original: DailyPlan): Dail
     minutes += m.minutes;
   }
 
-  if (picked.length === 0 && pool.length > 0) {
+  /* Nothing fitted inside the target, so take one anyway rather than hand back
+     an empty session. Gated on max_movements because a day that allows no
+     movements must not be rescued into allowing one. */
+  if (picked.length === 0 && pool.length > 0 && result.max_movements > 0) {
     picked.push(pool[0]);
     minutes = pool[0].minutes;
   }

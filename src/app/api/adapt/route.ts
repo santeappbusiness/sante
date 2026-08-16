@@ -46,7 +46,12 @@ function applyFit(
   fit: string[],
   profile: typeof MAYA
 ) {
-  if (fit.length === 0) return result;
+  /* A blocked day has no constraints to adjust. This runs before the blocked
+     check below, and the floors in Math.max would raise target_minutes back to
+     5 and max_movements back to 1, which is exactly the buildable shape the
+     gate exists to prevent. */
+  if (fit.length === 0 || result.blocked) return result;
+
   const next = { ...result, excluded_tags: [...result.excluded_tags], drivers: [...result.drivers] };
 
   for (const f of fit) {

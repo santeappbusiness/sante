@@ -115,7 +115,7 @@ export default function CalmToggleGlobal({ variant }: { variant: "bar" | "rail" 
             aria-pressed={on}
             aria-label={on ? "Calm mode is on. Turn it off." : "Turn calm mode on"}
             className={
-              "pointer-events-auto flex min-h-[40px] items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold shadow-[0_8px_24px_-12px_rgba(47,58,51,0.5)] ring-1 " +
+              "pointer-events-auto flex min-h-[44px] items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold shadow-[0_8px_24px_-12px_rgba(47,58,51,0.5)] ring-1 " +
               (on ? "bg-lavender text-ink ring-transparent" : "bg-surface/95 text-ink-soft ring-ink/15 backdrop-blur")
             }
           >

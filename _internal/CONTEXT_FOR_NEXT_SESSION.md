@@ -11,6 +11,59 @@ internal: never link it from the README, the app, or the submission.
 
 ---
 
+## Product freeze
+
+Feature work is frozen for judging. Do not add new features to the main app.
+A later production dry run found three targeted reliability blockers, recorded
+in section 6.0. Fix only those and the related follow-up items, then re-run the
+judge path in full before you push.
+
+**Frozen at:** `a22d722`, on `main`, live at https://sante-chi.vercel.app
+
+**Earlier judge path, verified end to end on this build** (375px, fresh browser, no
+account): landing → Try the demo → three-step orientation → check-in (four
+scales, the "not sure" option, the red-flag screen) → capacity summary →
+adaptation by Luna with `used_fallback: false` → plan diff with reasons →
+Start adapted plan → session player with a curated demonstration → fixed
+controls. Type-check and production build pass, and no console errors appear
+on Home, Explore, Week, Today, Progress, Saved, Profile or an active session.
+
+That pass did not exercise the low-capacity shortcut or wait on a selected
+strength adaptation. The later 390px run did, and section 6.0 is authoritative
+for the remaining work.
+
+**Two things this freeze pass found and fixed, both invisible from inside a
+normal dev loop:**
+
+1. `metadataBase` was never set, so every Open Graph and Twitter image URL
+   resolved to `http://localhost:3000`. Shared links rendered with no preview
+   card at all. Production now pins the real domain; a production build bakes
+   absolute URLs and the OG endpoint returns a 1200x630 PNG.
+
+2. Checking in on Home and pressing "Adapt today's plan" did nothing. The
+   identity isolation added in the state-scoping work purged the old unscoped
+   keys on arrival, and the Home-to-Today hand-off key was one of them, so
+   Today deleted the answers before reading them. The hand-off is now scoped
+   per identity. **This was the single most important path in the product and
+   it was silently broken in production.** If you change anything about
+   identity, storage keys or the check-in, walk this path by hand.
+
+**Known and accepted for judging** — none of these are bugs to fix under time
+pressure, but do not claim otherwise in the submission:
+
+- Supabase Auth dashboard config (templates, sender name, redirect URLs) is
+  still not done, so real signup does not complete. The demo needs no account.
+  Only the account owner can do this: `_internal/email-templates/README.md`.
+- Equipment is stored and shown but reaches no adaptation logic.
+- `unsure` answers are named back to the user but not persisted to `checkins`;
+  that needs a migration and belongs to Serene.
+- Browser-only mode cannot adapt: `/api/adapt` requires a session.
+- 23 movements have verified demonstrations; the rest deliberately show none.
+- No automated tests. Everything above was verified by hand.
+- Reduced motion is verified by inspection, not OS-level emulation.
+
+---
+
 ## 0. Who you are on this project
 
 Act as all of these at once, and say so plainly when they disagree:
@@ -186,7 +239,7 @@ the chat, stop, tell the user to rotate it immediately, and do not use it.
 | `src/lib/luna.ts` | The agent loop, tools, re-validation, natural-language request interpretation. |
 | `src/app/api/adapt/route.ts` | The SSE route. Safety gate → constraints → Luna → re-check → save. |
 | `src/lib/persist.ts` | All database writes. Identity comes from the bearer token, never the request body. |
-| `src/lib/workouts.ts` | 24 workouts, 20 collections. Collection → workout → movements. |
+| `src/lib/workouts.ts` | 23 workouts, 20 collections. Collection → workout → movements. |
 | `src/lib/week.ts` | The weekly planner, localStorage-backed. |
 | `src/lib/patterns.ts` | Arithmetic-only pattern derivation for Progress. Minimum 3 entries. |
 | `src/lib/seed-demo.ts` | Maya's 7-day history, written server-side with the service-role key. |
@@ -256,6 +309,58 @@ Verified live on `sante-chi.vercel.app` as of the last session:
 ---
 
 ## 6. Open work, in priority order
+
+### 6.0 Production judge-path dry run, 17 August 2026
+
+The mobile judge path was run end to end against
+`https://sante-chi.vercel.app/` at 390 by 844 before any fixes were started.
+This is the current freeze decision record. Do not erase these observations by
+calling the product finished; verify each one in production after it is fixed.
+
+**Three blockers before recording the final demo:**
+
+1. The one-tap **Everything feels like a lot right now** path goes directly to
+   adaptation and never presents the red-flag safety question. The ordinary
+   check-in does present it. A shortcut cannot silently turn missing safety
+   answers into none reported.
+2. Calm mode is out of sync. The floating control and Profile both say it is
+   off, while the adaptation service says “Calm mode keeps the session quiet,”
+   caps the result at three movements and opens the simplified result. This is
+   a product-truth failure, not a copy nit. Align the identity-scoped UI state,
+   stored profile and demo seed.
+3. Adapting a selected strength workout did not return inside a 30-second
+   browser timeout. It eventually completed and preserved the correct selected
+   movements, but that delay is not safe for a judge path or recorded demo.
+
+**Important follow-up items:**
+
+- Quiet Strength says 18 minutes on its detail page and 19 minutes when it
+  becomes “What you planned” on Today.
+- The landing-page session preview still says and shows “a question mark on
+  every movement,” although the product now uses curated demonstrations.
+- The low-capacity judge session reached Full body stretch, Body scan and Box
+  breathing, none of which had a verified demonstration. The baseline also
+  contains Full body stretch, so the movement-media packet did not meet its own
+  baseline-coverage claim.
+- Feedback was written to Supabase and later surfaced correctly, but refreshing
+  the completion screen offered the feedback buttons again and could create a
+  duplicate response.
+- Landing copy says 24 workouts while Explore reports the actual 23 sessions.
+- A production refresh took longer than 15 seconds during the run. Home to
+  Today also felt slow. Measure network and server time separately before
+  changing UI loading copy.
+
+**What passed:** the landing story, anonymous Maya demo, first-run orientation,
+Tour Again in Profile, intent-first Explore, selected-workout preservation,
+honest uncertain answers, Simplify Today, one-at-a-time player, optional timer,
+live swap, a privacy-enhanced YouTube embed, completion, feedback persistence,
+the bottom-inset fix and clean browser error/warning logs. Reset Demo was
+correct in this run because the path entered through Try Demo as fictional
+Maya.
+
+The honest status is: feature-complete enough for the hackathon, not yet ready
+to freeze. Fix the three blockers, then rerun the same mobile path before the
+video team records the final in-app footage.
 
 ### 6.1 DONE: the email confirmation flow
 

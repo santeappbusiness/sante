@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   collectionById,
   workoutById,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/workouts";
 import { mediaForMovement } from "@/lib/movement-media";
 import MovementDemo from "@/components/MovementDemo";
+import { usePublishBottomInset } from "@/lib/bottomInset";
 import { readCalm, useCalmSync } from "@/components/CalmMode";
 import type { Movement } from "@/types/domain";
 import { addToDay, loadWeek, todayName, type PlannedDay } from "@/lib/week";
@@ -43,6 +44,11 @@ export default function WorkoutDetail() {
   const [demo, setDemo] = useState<Movement | null>(null);
   const [calm, setCalm] = useState(false);
   useCalmSync(setCalm);
+
+  /* This page parks its own bar above the navigation, so the floating Calm
+     control has to be told how tall it is or it lands on "Start session". */
+  const actions = useRef<HTMLDivElement>(null);
+  usePublishBottomInset(actions);
 
   const { identity, loading } = useIdentity();
   const uid = identity?.id ?? null;
@@ -260,6 +266,7 @@ export default function WorkoutDetail() {
             the desktop start action at the very bottom of a long page: the one
             thing this page exists for was the last thing anyone could find. */}
         <div
+          ref={actions}
           className="fixed inset-x-0 bottom-[60px] z-20 border-t border-ink/10 bg-surface/95 px-5 py-3 backdrop-blur lg:bottom-0 lg:left-56"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
         >

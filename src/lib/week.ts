@@ -117,6 +117,50 @@ export function proposeRebalance(
   };
 }
 
+/** Clear a day back to rest. */
+export function clearDay(day: string): PlannedDay[] {
+  const week = loadWeek().map((d) =>
+    d.day === day
+      ? { ...d, kind: "rest" as DayKind, title: "Rest", minutes: 0, movement_ids: [], workout_id: undefined }
+      : d
+  );
+  saveWeek(week);
+  return week;
+}
+
+/** Move whatever is on one day to another, swapping if the target is taken. */
+export function moveDay(from: string, to: string): PlannedDay[] {
+  const week = loadWeek();
+  const a = week.findIndex((d) => d.day === from);
+  const b = week.findIndex((d) => d.day === to);
+  if (a === -1 || b === -1) return week;
+
+  const next = week.map((d) => ({ ...d }));
+  const carried = { ...next[a], day: next[b].day };
+  const displaced = { ...next[b], day: next[a].day };
+  next[b] = carried;
+  next[a] = displaced;
+  saveWeek(next);
+  return next;
+}
+
+/** Set a day's type without changing what is on it. */
+export function setDayKind(day: string, kind: DayKind): PlannedDay[] {
+  const week = loadWeek().map((d) =>
+    d.day === day
+      ? {
+          ...d,
+          kind,
+          title: kind === "rest" ? "Rest" : kind === "recovery" ? "Recovery" : d.title,
+          movement_ids: kind === "rest" ? [] : d.movement_ids,
+          minutes: kind === "rest" ? 0 : d.minutes,
+        }
+      : d
+  );
+  saveWeek(week);
+  return week;
+}
+
 /** Schedule a workout onto a day. Returns the updated week. */
 export function addToDay(day: string, workout: Workout): PlannedDay[] {
   const week = loadWeek().map((d) =>

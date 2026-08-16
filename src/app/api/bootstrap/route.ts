@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { resolveUserRecord } from "@/lib/persist";
 import { TODAYS_PLAN } from "@/lib/demo-data";
+import { seedDemoHistory } from "@/lib/seed-demo";
 
 export const runtime = "nodejs";
 
@@ -67,6 +68,13 @@ export async function POST(req: NextRequest) {
       intensity: TODAYS_PLAN.intensity,
       is_baseline: true,
     });
+  }
+
+  /* Anonymous visitors are the demo, and the demo should not look like an
+     account nobody has used. Real signed-up accounts start empty, which is
+     honest: we never invent history for a person. */
+  if (user.is_anonymous) {
+    await seedDemoHistory(profileId);
   }
 
   return Response.json({ ok: true, created });

@@ -67,6 +67,7 @@ function toDailyPlan(row: any): DailyPlan {
 }
 
 export class SupabaseStore implements Store {
+  private static bootstrapped = new Set<string>();
   private profileId: string | null = null;
 
   /* Pages like Progress and Profile construct their own store and never call
@@ -92,6 +93,29 @@ export class SupabaseStore implements Store {
        again: it inserts on conflict do nothing. */
     const { error } = await sb.rpc("start_demo_session");
     if (error) return this.offline(seedPlan);
+
+    /* Give the demo its history. Server-side, because the client cannot write
+       check-ins or adaptations and should not be able to. Once per tab: React
+       runs effects twice in development and both would fire this. */
+    if (SupabaseStore.bootstrapped.has(uid)) {
+      return this.hydrate(seedPlan, {
+        stage: "plan",
+        completed_movement_ids: [],
+        result: null,
+        last_checkin: null,
+      });
+    }
+    SupabaseStore.bootstrapped.add(uid);
+
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data.session) {
+        await fetch("/api/bootstrap", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        });
+      }
+    } catch {}
 
     return this.hydrate(seedPlan, { stage: "plan", completed_movement_ids: [], result: null, last_checkin: null });
   }

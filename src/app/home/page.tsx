@@ -39,7 +39,10 @@ export default function Home() {
       setWeek(loadWeek());
       setCalm(readCalm(false));
       const store = getStore();
-      const session = await store.load();
+      /* Home is the front door, so identity gets established here rather than
+         only on Today. Without it a demo visitor who never opens Today has no
+         session, and therefore no seeded history to look at. */
+      const session = (await store.load()) ?? (await store.createSession(TODAYS_PLAN));
       if (session?.last_checkin) setCheckin(session.last_checkin);
       setHistory((await store.history?.()) ?? []);
 

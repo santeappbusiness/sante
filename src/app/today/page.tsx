@@ -19,6 +19,7 @@ import PlanDiff from "@/components/PlanDiff";
 import AgentEvents from "@/components/AgentEvents";
 import SessionPlayer from "@/components/SessionPlayer";
 import SessionOpening from "@/components/SessionOpening";
+import { PlayIcon } from "@/components/ControlIcons";
 import MakeItFit from "@/components/MakeItFit";
 import MemoryProposal from "@/components/MemoryProposal";
 import AppNav from "@/components/AppNav";
@@ -403,6 +404,10 @@ export default function Today() {
 
   const plan = session.plan;
   const result = session.result;
+  /* Calm mode implies it, because a standing choice to be shown less should
+     not have to be repeated every day. Simplifying today does not imply calm
+     mode: one afternoon is not a preference. */
+  const simple = Boolean(session.simplified) || nd;
   const completed = session.completed_movement_ids;
 
   return (
@@ -560,6 +565,87 @@ export default function Today() {
       )}
 
       {stage === "result" && result && (
+        simple ? (
+          /* One recommendation, one action, and everything else folded away.
+             Not less information: the same information, behind a disclosure, so
+             reading it is a choice rather than the price of using the app. */
+          <section className="mt-8">
+            <h2 className="text-3xl">Today, made simpler.</h2>
+
+            <div className="mt-5 rounded-[26px] bg-moss/25 p-7">
+              <p className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
+                What Santé suggests
+              </p>
+              <p className="mt-2 font-display text-4xl leading-[1.05] tabular-nums text-moss-deep">
+                {result.adapted.total_minutes} min
+                <br />
+                <span className="text-2xl">
+                  {result.adapted.movements.length} movement
+                  {result.adapted.movements.length === 1 ? "" : "s"}
+                </span>
+              </p>
+
+              <button
+                className="mt-6 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-4 text-lg font-bold text-coral-on"
+                onClick={() => goTo("session", { plan: result.adapted, completed_movement_ids: [] })}
+              >
+                <span aria-hidden="true">
+                  <PlayIcon size={19} />
+                </span>
+                Start
+              </button>
+            </div>
+
+            <details className="mt-4 rounded-2xl bg-surface p-5 ring-1 ring-ink/10">
+              <summary className="cursor-pointer font-bold">Why this changed</summary>
+              <ul className="mt-3 grid gap-1.5 text-ink-soft">
+                {result.reasons.map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+            </details>
+
+            <details className="mt-2 rounded-2xl bg-surface p-5 ring-1 ring-ink/10">
+              <summary className="cursor-pointer font-bold">Compared with what you planned</summary>
+              <p className="mt-3 font-mono text-sm text-ink-soft">
+                {result.original.total_minutes} min · {result.original.movements.length} movements
+                {" → "}
+                {result.adapted.total_minutes} min · {result.adapted.movements.length} movements
+              </p>
+            </details>
+
+            <details className="mt-2 rounded-2xl bg-surface p-5 ring-1 ring-ink/10">
+              <summary className="cursor-pointer font-bold">Other options</summary>
+              <div className="mt-4 flex flex-wrap gap-2.5">
+                <button
+                  className="min-h-[44px] rounded-xl bg-surface px-5 py-3 font-bold ring-1 ring-ink/15"
+                  onClick={() => session.last_checkin && adapt(session.last_checkin, true)}
+                >
+                  Still too much
+                </button>
+                <button
+                  className="min-h-[44px] rounded-xl px-5 py-3 text-ink-soft underline"
+                  onClick={() => goTo("session", { plan: result.original, completed_movement_ids: [] })}
+                >
+                  Keep the original
+                </button>
+                <button
+                  className="min-h-[44px] rounded-xl px-5 py-3 text-ink-soft underline"
+                  onClick={() => goTo("rest")}
+                >
+                  Rest today
+                </button>
+              </div>
+            </details>
+
+            <button
+              onClick={() => patch({ simplified: false })}
+              className="nd-secondary mt-5 min-h-[44px] text-sm text-slate underline underline-offset-4"
+            >
+              Show me everything again
+            </button>
+          </section>
+        ) : (
         <section className="mt-8">
           <h2 className="mb-4 text-3xl">Your plan flexed.</h2>
 
@@ -619,7 +705,17 @@ export default function Today() {
               Rest today
             </button>
           </div>
+
+          {/* Offered where it is needed, which is looking at a screen that has
+              turned out to be more than you have. */}
+          <button
+            onClick={() => patch({ simplified: true })}
+            className="nd-secondary mt-5 min-h-[44px] text-sm text-slate underline underline-offset-4"
+          >
+            This is a lot right now. Simplify today.
+          </button>
         </section>
+        )
       )}
 
       {stage === "session" && !opened && calmKnown && (

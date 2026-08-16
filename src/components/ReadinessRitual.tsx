@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ReadinessCheckin, RedFlag } from "@/types/domain";
+import type { ReadinessCheckin, RedFlag, ScaleKey } from "@/types/domain";
 import CapacityBloom, { toBloom } from "./CapacityBloom";
 import { Blob } from "./BrandShapes";
 
@@ -12,8 +12,6 @@ import { Blob } from "./BrandShapes";
  * end so the last thing someone sees is a picture of their own day rather than
  * a submit button. Still about twenty seconds start to finish.
  */
-
-type ScaleKey = "energy" | "discomfort" | "mood" | "sensory_load";
 
 const STEPS: Array<{
   key: ScaleKey;
@@ -70,6 +68,7 @@ export default function ReadinessRitual({
 }) {
   const [step, setStep] = useState(0);
   const [values, setValues] = useState({ energy: 3, discomfort: 3, mood: 3, sensory_load: 3 });
+  const [unsure, setUnsure] = useState<ScaleKey[]>([]);
   const [flags, setFlags] = useState<RedFlag[]>([]);
 
   const total = STEPS.length + 2; // scales, then the safety question, then the bloom
@@ -77,8 +76,34 @@ export default function ReadinessRitual({
 
   function answer(value: number) {
     setValues((v) => ({ ...v, [current.key]: value }));
+    setUnsure((u) => u.filter((k) => k !== current.key));
     /* Answering advances. One tap per question, no separate Next button. */
     setTimeout(() => setStep((s) => s + 1), quiet ? 0 : 160);
+  }
+
+  /* "I cannot tell" is an answer, not a refusal to answer. It keeps the
+     midpoint so the maths still works, and records that the midpoint was ours
+     rather than hers so the plan can say so. */
+  function answerUnsure() {
+    setValues((v) => ({ ...v, [current.key]: 3 }));
+    setUnsure((u) => (u.includes(current.key) ? u : [...u, current.key]));
+    setTimeout(() => setStep((s) => s + 1), quiet ? 0 : 160);
+  }
+
+  /* One tap for the day when working through four questions is itself the
+     problem. It says one thing plainly, that sensory load is high, and marks
+     the rest as unknown rather than inventing numbers for them. It does not
+     touch energy or discomfort: being overwhelmed is not the same as being
+     physically depleted, and Santé does not get to decide that it is. */
+  function everythingIsALot() {
+    onSubmit({
+      energy: 3,
+      discomfort: 3,
+      mood: 3,
+      sensory_load: 5,
+      unsure: ["energy", "discomfort", "mood"],
+      red_flags: [],
+    });
   }
 
   return (
@@ -132,6 +157,24 @@ export default function ReadinessRitual({
             <span>{current.low}</span>
             <span>{current.high}</span>
           </div>
+
+          <button
+            type="button"
+            onClick={answerUnsure}
+            className="mt-5 w-full rounded-2xl bg-canvas px-5 py-3.5 text-sm font-bold ring-1 ring-ink/10 hover:ring-ink/25"
+          >
+            Not sure, I cannot tell today
+          </button>
+
+          {step === 0 && (
+            <button
+              type="button"
+              onClick={everythingIsALot}
+              className="mt-2 w-full rounded-2xl px-5 py-3 text-sm text-ink-soft underline decoration-slate/40 underline-offset-4"
+            >
+              Everything feels like a lot right now
+            </button>
+          )}
 
           {step > 0 && (
             <button
@@ -203,12 +246,12 @@ export default function ReadinessRitual({
 
       {step === total - 1 && (
         <div className="relative text-center">
-          <CapacityBloom values={toBloom({ ...values, red_flags: flags })} quiet={quiet} />
+          <CapacityBloom values={toBloom({ ...values, unsure, red_flags: flags })} quiet={quiet} />
 
           <button
             type="button"
             disabled={busy}
-            onClick={() => onSubmit({ ...values, red_flags: flags })}
+            onClick={() => onSubmit({ ...values, unsure, red_flags: flags })}
             className="mt-8 w-full rounded-2xl bg-coral px-6 py-4 text-lg font-bold text-coral-on disabled:opacity-60"
           >
             {busy ? "Working on it" : "Adapt today's plan"}

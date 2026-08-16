@@ -88,7 +88,7 @@ export default function Onboarding() {
       is_demo: false,
     };
     return computeReadiness(
-      { energy: 3, discomfort: 3, mood: 3, sensory_load: 3, red_flags: [] },
+      { energy: 3, discomfort: 3, mood: 3, sensory_load: 3, unsure: [], red_flags: [] },
       profile,
       TODAYS_PLAN
     );

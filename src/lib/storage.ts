@@ -28,6 +28,16 @@ export type StoredSession = {
   /** Set once we have offered to remember something, so we ask only once. */
   memory_offered?: boolean;
   /**
+   * Today only: show the least the result can be and still be useful.
+   *
+   * Separate from calm mode on purpose. Calm mode is a standing choice about
+   * how the whole app behaves; this is one bad afternoon. Conflating them
+   * would mean a person who wanted less on a Tuesday had to remember to undo
+   * it, or that turning calm mode on for the interface quietly reduced what
+   * she was told.
+   */
+  simplified?: boolean;
+  /**
    * The workout this day is built from, when someone chose one.
    *
    * Held on the session rather than read from the URL each time, because the

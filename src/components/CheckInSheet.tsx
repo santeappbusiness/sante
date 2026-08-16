@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useModalFocus } from "@/lib/useModalFocus";
-import type { ReadinessCheckin, RedFlag } from "@/types/domain";
+import type { ReadinessCheckin, RedFlag, ScaleKey } from "@/types/domain";
 import CapacityBloom, { toBloom } from "./CapacityBloom";
 
 /**
@@ -16,8 +16,6 @@ import CapacityBloom, { toBloom } from "./CapacityBloom";
  * The /today route still exists for deep links and for anyone who prefers a
  * page, but it is no longer the normal way in.
  */
-
-type ScaleKey = "energy" | "discomfort" | "mood" | "sensory_load";
 
 const STEPS: Array<{ key: ScaleKey; question: string; low: string; high: string }> = [
   { key: "energy", question: "How much energy do you have?", low: "Empty", high: "Full" },
@@ -46,6 +44,7 @@ export default function CheckInSheet({
 }) {
   const [step, setStep] = useState(0);
   const [values, setValues] = useState({ energy: 3, discomfort: 3, mood: 3, sensory_load: 3 });
+  const [unsure, setUnsure] = useState<ScaleKey[]>([]);
   const [flags, setFlags] = useState<RedFlag[]>([]);
   const panel = useRef<HTMLDivElement>(null);
 
@@ -56,6 +55,7 @@ export default function CheckInSheet({
     if (open) {
       setStep(0);
       setValues({ energy: 3, discomfort: 3, mood: 3, sensory_load: 3 });
+      setUnsure([]);
       setFlags([]);
     }
   }, [open]);
@@ -126,6 +126,7 @@ export default function CheckInSheet({
                   aria-pressed={values[current.key] === n}
                   onClick={() => {
                     setValues((v) => ({ ...v, [current.key]: n }));
+                    setUnsure((u) => u.filter((k) => k !== current.key));
                     setTimeout(() => setStep((s) => s + 1), quiet ? 0 : 150);
                   }}
                   className={
@@ -144,6 +145,37 @@ export default function CheckInSheet({
               <span>{current.low}</span>
               <span>{current.high}</span>
             </div>
+
+            {/* An answer, not a refusal. Keeps the midpoint and records that
+                the midpoint was ours. */}
+            <button
+              onClick={() => {
+                setValues((v) => ({ ...v, [current.key]: 3 }));
+                setUnsure((u) => (u.includes(current.key) ? u : [...u, current.key]));
+                setTimeout(() => setStep((s) => s + 1), quiet ? 0 : 150);
+              }}
+              className="mt-4 w-full rounded-2xl bg-canvas px-5 py-3 text-sm font-bold ring-1 ring-ink/10"
+            >
+              Not sure, I cannot tell today
+            </button>
+
+            {step === 0 && (
+              <button
+                onClick={() =>
+                  onSubmit({
+                    energy: 3,
+                    discomfort: 3,
+                    mood: 3,
+                    sensory_load: 5,
+                    unsure: ["energy", "discomfort", "mood"],
+                    red_flags: [],
+                  })
+                }
+                className="mt-2 w-full rounded-2xl px-5 py-2.5 text-sm text-ink-soft underline decoration-slate/40 underline-offset-4"
+              >
+                Everything feels like a lot right now
+              </button>
+            )}
 
             <div className="mt-6 flex items-center justify-between">
               <button
@@ -199,10 +231,10 @@ export default function CheckInSheet({
 
         {step === total - 1 && (
           <div className="text-center">
-            <CapacityBloom values={toBloom({ ...values, red_flags: flags })} quiet={quiet} />
+            <CapacityBloom values={toBloom({ ...values, unsure, red_flags: flags })} quiet={quiet} />
 
             <button
-              onClick={() => onSubmit({ ...values, red_flags: flags })}
+              onClick={() => onSubmit({ ...values, unsure, red_flags: flags })}
               className="mt-7 w-full rounded-2xl bg-coral px-6 py-4 text-lg font-bold text-coral-on"
             >
               Adapt today&rsquo;s plan

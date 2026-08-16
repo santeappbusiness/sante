@@ -30,11 +30,27 @@ export const redFlagSchema = z.enum([
   "possible_pregnancy_complication",
 ]);
 
+export const scaleKeySchema = z.enum(["energy", "discomfort", "mood", "sensory_load"]);
+
 export const readinessCheckinSchema = z.object({
   energy: readinessScale,
   discomfort: readinessScale,
   mood: readinessScale,
   sensory_load: readinessScale,
+  /**
+   * The answers she could not give a number to.
+   *
+   * "I cannot tell" is a real answer, and on the days this app is for it may be
+   * the only honest one. The scale still carries the midpoint so the maths has
+   * something to work with, but recording which answers were guesses means
+   * Santé can say it guessed instead of quietly presenting an assumption as
+   * something she told us.
+   *
+   * Deliberately does not make the session easier on its own. Not knowing how
+   * much energy you have is not the same as having none, and treating it as
+   * such would be the app deciding something about her body that she did not.
+   */
+  unsure: z.array(scaleKeySchema).default([]),
   red_flags: z.array(redFlagSchema).default([]),
   note: z.string().max(500).optional(),
 });
@@ -197,6 +213,7 @@ export const agentEventSchema = z.object({
 
 export type RedFlag = z.infer<typeof redFlagSchema>;
 export type ReadinessCheckin = z.infer<typeof readinessCheckinSchema>;
+export type ScaleKey = z.infer<typeof scaleKeySchema>;
 export type ReadinessResult = z.infer<typeof readinessResultSchema>;
 export type Intensity = z.infer<typeof intensitySchema>;
 export type Movement = z.infer<typeof movementSchema>;

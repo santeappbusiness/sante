@@ -116,6 +116,25 @@ export function computeReadiness(
     drivers.push("you use calm mode");
   }
 
+  /* Answers she could not put a number to. Named rather than absorbed: the
+     midpoint is our assumption, not something she said, and a plan built on a
+     guess should admit which part was guessed.
+
+     Deliberately does not change a single constraint. "I cannot tell how much
+     energy I have" is not "I have none", and quietly shortening the session
+     would be Santé deciding something about her body that she did not. */
+  if (checkin.unsure.length > 0) {
+    const words = checkin.unsure.map((k) =>
+      k === "sensory_load" ? "sensory load" : k === "discomfort" ? "comfort" : k
+    );
+    /* "energy or comfort or mood" is not how anyone speaks. */
+    const named =
+      words.length > 1
+        ? `${words.slice(0, -1).join(", ")} or ${words[words.length - 1]}`
+        : words[0];
+    drivers.push(`you were not sure about ${named}, so we assumed the middle`);
+  }
+
   /* Say so when someone reports a good day. Without this the only sentence the
      model ever sees is a flat "feeling steady", and it plays safe by trimming a
      session that did not need trimming. A good day is information too. */

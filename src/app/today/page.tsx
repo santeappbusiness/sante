@@ -59,8 +59,30 @@ export default function Today() {
       const s = existing ?? (await store.createSession(TODAYS_PLAN));
       setSession(s);
       setStage((s.stage as Stage) || "plan");
+
+      /* Someone checked in from Home. Run it now rather than making them
+         answer the same four questions again on this page. */
+      try {
+        const pending = sessionStorage.getItem("sante-pending-checkin");
+        if (pending && new URLSearchParams(window.location.search).has("adapt")) {
+          sessionStorage.removeItem("sante-pending-checkin");
+          setPendingCheckin(JSON.parse(pending));
+        }
+      } catch {}
     })();
   }, [store]);
+
+  /* Deferred so the adapt call runs once the session exists. */
+  const [pendingCheckin, setPendingCheckin] = useState<ReadinessCheckin | null>(null);
+  useEffect(() => {
+    if (session && pendingCheckin) {
+      const c = pendingCheckin;
+      setPendingCheckin(null);
+      adaptRef.current?.(c);
+    }
+  }, [session, pendingCheckin]);
+
+  const adaptRef = useRef<((c: ReadinessCheckin) => void) | null>(null);
 
   /* Whatever they chose last time wins over the profile default. */
   useEffect(() => {
@@ -197,6 +219,8 @@ export default function Today() {
     },
     [session, patch, goTo]
   );
+
+  adaptRef.current = (c: ReadinessCheckin) => adapt(c);
 
   if (!session) {
     return (

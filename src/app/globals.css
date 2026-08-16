@@ -51,6 +51,40 @@
 .morph-delay-2 { animation-delay: 180ms; }
 .morph-delay-3 { animation-delay: 280ms; }
 
+/* The check-in sheet rises rather than appearing. Short, because it is in the
+   way of something the person asked for. */
+@keyframes sante-sheet {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+.sheet-rise {
+  animation: sante-sheet 260ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+/* Navigation micro-animations. One shot, brand language, no bouncing.
+   Petals opening for Today, a line drawing up for Progress, a gentle settle
+   elsewhere. All of it skipped in calm mode and under reduced motion. */
+@keyframes sante-nav-settle {
+  from { transform: translateY(2px) scale(0.94); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes sante-nav-bloom {
+  0% { transform: scale(0.7) rotate(-8deg); opacity: 0.5; }
+  60% { transform: scale(1.04) rotate(0deg); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+
+.nav-anim { animation: sante-nav-settle 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.nav-anim-bloom { animation: sante-nav-bloom 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+[data-nd="on"] .nav-anim,
+[data-nd="on"] .nav-anim-bloom,
+[data-nd="on"] .sheet-rise {
+  animation: none;
+}
+
 /* Neurodivergent mode: calmer surfaces, no motion, one thing at a time.
    Applied by adding data-nd="on" to <html>. */
 [data-nd="on"] * {

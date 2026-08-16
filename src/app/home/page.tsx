@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { COLLECTIONS, TODAYS_PLAN, MAYA } from "@/lib/demo-data";
+import { TODAYS_PLAN, MAYA } from "@/lib/demo-data";
 import { getStore, type HistoryEntry } from "@/lib/storage";
 import { getSupabase } from "@/lib/supabase/client";
 import { loadWeek, planMinutes, todayName, type PlannedDay } from "@/lib/week";
-import CapacityBloom, { toBloom } from "@/components/CapacityBloom";
+import CapacityBloom, { capacityLabel, toBloom } from "@/components/CapacityBloom";
+import CheckInSheet from "@/components/CheckInSheet";
+import CheckInPrompt from "@/components/CheckInPrompt";
+import { readCalm } from "@/components/CalmMode";
+import { recommendWorkouts } from "@/lib/workouts";
+import { WorkoutCard } from "@/components/WorkoutCard";
 import AppNav from "@/components/AppNav";
 import { Blob, Flower, Sprig, Waves } from "@/components/BrandShapes";
 import type { ReadinessCheckin } from "@/types/domain";
@@ -26,10 +31,13 @@ export default function Home() {
   const [checkin, setCheckin] = useState<ReadinessCheckin | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [week, setWeek] = useState<PlannedDay[]>([]);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [calm, setCalm] = useState(false);
 
   useEffect(() => {
     (async () => {
       setWeek(loadWeek());
+      setCalm(readCalm(false));
       const store = getStore();
       const session = await store.load();
       if (session?.last_checkin) setCheckin(session.last_checkin);
@@ -71,12 +79,20 @@ export default function Home() {
                     <p className="max-w-sm text-ink-soft">
                       That is today as you described it. Your plan already reflects it.
                     </p>
-                    <Link
-                      href="/today"
-                      className="mt-5 inline-block rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
-                    >
-                      Go to today
-                    </Link>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <Link
+                        href="/today"
+                        className="rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
+                      >
+                        See today&rsquo;s plan
+                      </Link>
+                      <button
+                        onClick={() => setSheetOpen(true)}
+                        className="rounded-2xl bg-surface px-5 py-3.5 font-bold ring-1 ring-ink/15"
+                      >
+                        Update check-in
+                      </button>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -93,12 +109,12 @@ export default function Home() {
                       Four questions, about twenty seconds, and today&rsquo;s session fits the
                       day you are actually having.
                     </p>
-                    <Link
-                      href="/today"
-                      className="mt-5 inline-block rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
+                    <button
+                      onClick={() => setSheetOpen(true)}
+                      className="mt-5 rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
                     >
-                      Check in
-                    </Link>
+                      Check in · 20 sec
+                    </button>
                   </div>
                 </>
               )}
@@ -155,22 +171,13 @@ export default function Home() {
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {COLLECTIONS.slice(0, 3).map((c, i) => (
-                <Link
-                  key={c.id}
-                  href={`/explore/${c.id}`}
-                  className={
-                    "relative overflow-hidden rounded-[22px] p-5 " +
-                    (i === 0
-                      ? "bg-moss/25"
-                      : i === 1
-                      ? "bg-surface ring-1 ring-ink/10"
-                      : "bg-coral/15")
-                  }
-                >
-                  <p className="relative font-display text-xl leading-tight">{c.title}</p>
-                  <p className="relative mt-1.5 text-sm text-ink-soft">{c.blurb}</p>
-                </Link>
+              {recommendWorkouts({
+                avoidTags: MAYA.avoid_tags,
+                preferredMinutes: MAYA.preferred_minutes,
+                calm,
+                limit: 3,
+              }).map((w, i) => (
+                <WorkoutCard key={w.id} workout={w} index={i} />
               ))}
             </div>
           </section>
@@ -240,6 +247,26 @@ export default function Home() {
           )}
         </div>
       </main>
+
+      <CheckInPrompt
+        capacity={checkin ? capacityLabel(toBloom(checkin)) : null}
+        onOpen={() => setSheetOpen(true)}
+      />
+
+      <CheckInSheet
+        open={sheetOpen}
+        quiet={calm}
+        onClose={() => setSheetOpen(false)}
+        onSubmit={(c) => {
+          /* Hand the answers to Today, which owns the adaptation. The sheet's
+             job is collecting them without making anyone leave Home. */
+          try {
+            sessionStorage.setItem("sante-pending-checkin", JSON.stringify(c));
+          } catch {}
+          window.location.assign("/today?adapt=1");
+        }}
+      />
+
       <AppNav />
     </>
   );

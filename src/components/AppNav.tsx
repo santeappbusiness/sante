@@ -55,7 +55,13 @@ export default function AppNav() {
                     (active ? "text-ink" : "text-slate")
                   }
                 >
-                  <span className={primary && active ? "text-coral" : undefined}>
+                  <span
+                    key={active ? "on" : "off"}
+                    className={
+                      (primary && active ? "text-coral " : "") +
+                      (active ? (primary ? "nav-anim-bloom" : "nav-anim") : "")
+                    }
+                  >
                     <Icon active={active} size={24} />
                   </span>
                   <span className={"text-[11px] leading-none " + (active ? "font-bold" : "")}>
@@ -92,7 +98,13 @@ export default function AppNav() {
                       : "text-ink-soft hover:bg-canvas hover:text-ink")
                   }
                 >
-                  <span className={primary && active ? "text-coral" : undefined}>
+                  <span
+                    key={active ? "on" : "off"}
+                    className={
+                      (primary && active ? "text-coral " : "") +
+                      (active ? (primary ? "nav-anim-bloom" : "nav-anim") : "")
+                    }
+                  >
                     <Icon active={active} size={22} />
                   </span>
                   {label}

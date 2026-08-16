@@ -9,5 +9,7 @@ out
 *.tsbuildinfo
 next-env.d.ts
 
-# Internal team coordination, not part of the product
-_internal/
+# Internal team coordination, not part of the product. The context handoff is
+# the exception: a teammate cloning the repo needs it to pick the work up.
+_internal/*
+!_internal/CONTEXT_FOR_NEXT_SESSION.md

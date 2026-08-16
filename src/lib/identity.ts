@@ -172,6 +172,17 @@ export function readScoped<T>(base: string, id: string | null, fallback: T): T {
   }
 }
 
+/** Whether this identity has ever written this key, as distinct from having
+ *  written a value that happens to be falsy. */
+export function hasScoped(base: string, id: string | null): boolean {
+  if (!id) return false;
+  try {
+    return localStorage.getItem(scopedKey(base, id)) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export function writeScoped(base: string, id: string | null, value: unknown) {
   if (!id) return;
   try {

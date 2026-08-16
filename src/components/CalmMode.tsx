@@ -22,7 +22,10 @@ import { readScoped, writeScoped } from "@/lib/identity";
  * rather than being a toggle they have to find again every visit.
  */
 
-const KEY = "calm";
+/** Exported so callers can ask whether a preference was ever set, which is
+ *  different from asking whether it is currently on. */
+export const CALM_KEY = "calm";
+const KEY = CALM_KEY;
 
 /**
  * Off unless this identity turned it on.

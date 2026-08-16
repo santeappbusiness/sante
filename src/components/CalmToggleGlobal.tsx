@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CalmIcon } from "./ControlIcons";
-import { readCalm, useCalmSync, writeCalm } from "./CalmMode";
+import { CALM_KEY, readCalm, useCalmSync, writeCalm } from "./CalmMode";
 import { useModalFocus } from "@/lib/useModalFocus";
-import { readScoped, useIdentity, writeScoped } from "@/lib/identity";
+import { hasScoped, readScoped, useIdentity, writeScoped } from "@/lib/identity";
 import { getSupabase } from "@/lib/supabase/client";
 import { ABOVE_BOTTOM_STACK } from "@/lib/bottomInset";
 
@@ -52,6 +52,21 @@ export default function CalmToggleGlobal({ variant }: { variant: "bar" | "rail" 
     setOn(value);
     document.documentElement.setAttribute("data-nd", value ? "on" : "off");
     setReady(true);
+
+    /* The demo profile is seeded in the database with calm mode already on,
+       from back when the demo persona used it. The control says off, correctly,
+       and the adaptation is built server-side from the profile — so the plan
+       came back explaining "you use calm mode" to someone looking at a switch
+       that reads off. One of them has to be wrong, and it is not the switch she
+       is looking at.
+
+       Only for a demo identity that has never set a preference. A real account
+       signing in on a new device has a genuine stored preference and this must
+       not overwrite it. */
+    if (!identity?.isDemo || hasScoped(CALM_KEY, id) || value) return;
+    const sb = getSupabase();
+    if (!sb || !id) return;
+    sb.from("profiles").update({ nd_mode: false }).eq("id", id).then(() => {});
   }, [loading, identity]);
 
   /* Profile has its own row for this. Whichever one she touches, both move. */

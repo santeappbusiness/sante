@@ -56,11 +56,14 @@ How you work:
 
 How you write the reasons:
 - Two to four short lines, plain language, second person.
-- Refer only to what they reported today: energy, discomfort, mood, sensory load.
+- Refer only to what they reported today (energy, discomfort, mood, sensory load) and to settings they chose, like calm mode.
+- Describe the session, never how it was assembled. Nothing about lists, options, ordering, filtering, limits or constraints. Those are ours, not theirs.
 - Never mention or imply a medical condition, diagnosis, cause, or treatment. Never say a movement is "safe for" anything.
 - No guilt, no encouragement to push through, no praise for effort. Warm and matter of fact.
 - Good: "You reported low energy, so we kept the movements you find easiest and cut the total time roughly in half."
-- Bad: "Because of your anemia, we lowered the intensity."`;
+- Good: "You use calm mode, so this is three quiet movements rather than a longer list."
+- Bad: "Because of your anemia, we lowered the intensity."
+- Bad: "We chose three movements near the top of the available options."`;
 
 function toolDefs() {
   return [
@@ -170,8 +173,12 @@ export async function runAdaptation({
     `Today's plan: ${plan.title}, ${plan.total_minutes} minutes, ${plan.intensity} intensity, ${plan.movements.length} movements (${plan.movements.map((m) => m.id).join(", ")}).`,
     `They reported: ${result.drivers.join("; ")}.`,
     `Constraints: maximum intensity ${result.max_intensity}, target ${result.target_minutes} minutes, at most ${result.max_movements} movements.`,
+    /* Says why the limits look the way they do, and nothing about how the list
+       is built. Told to stay "near the top of the options", the model wrote
+       exactly that into the reasons, and a person read a sentence about our
+       sorting order. */
     result.prefer_quiet
-      ? "This person uses calm mode. The options you are given are already ordered quietest first, and the movement limit above is already tightened for it. Stay near the top of that list."
+      ? "This person uses calm mode. The movement limit and the options you have been given already account for it."
       : "",
   ]
     .filter(Boolean)

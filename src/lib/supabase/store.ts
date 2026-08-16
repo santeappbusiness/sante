@@ -94,28 +94,7 @@ export class SupabaseStore implements Store {
     const { error } = await sb.rpc("start_demo_session");
     if (error) return this.offline(seedPlan);
 
-    /* Give the demo its history. Server-side, because the client cannot write
-       check-ins or adaptations and should not be able to. Once per tab: React
-       runs effects twice in development and both would fire this. */
-    if (SupabaseStore.bootstrapped.has(uid)) {
-      return this.hydrate(seedPlan, {
-        stage: "plan",
-        completed_movement_ids: [],
-        result: null,
-        last_checkin: null,
-      });
-    }
-    SupabaseStore.bootstrapped.add(uid);
-
-    try {
-      const { data } = await sb.auth.getSession();
-      if (data.session) {
-        await fetch("/api/bootstrap", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-        });
-      }
-    } catch {}
+    await this.bootstrap(uid);
 
     return this.hydrate(seedPlan, { stage: "plan", completed_movement_ids: [], result: null, last_checkin: null });
   }
@@ -129,7 +108,37 @@ export class SupabaseStore implements Store {
     if (!uid) return null;
 
     this.profileId = uid;
+    /* Also here, not only on createSession. A visitor who already has an
+       identity from a previous visit never goes through createSession, and
+       without this they would keep landing on an empty demo forever. */
+    await this.bootstrap(uid);
     return this.hydrate(TODAYS_PLAN, readLocal());
+  }
+
+  /**
+   * Give the identity its profile, baseline plan, and (for the demo) a past.
+   *
+   * Server-side, because the client cannot write check-ins or adaptations and
+   * should not be able to. Once per tab, since React runs effects twice in
+   * development and both would fire this; the route itself is idempotent, so a
+   * second call is harmless rather than a second fortnight of history.
+   */
+  private async bootstrap(uid: string): Promise<void> {
+    if (SupabaseStore.bootstrapped.has(uid)) return;
+    SupabaseStore.bootstrapped.add(uid);
+
+    const sb = getSupabase();
+    if (!sb) return;
+
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data.session) {
+        await fetch("/api/bootstrap", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        });
+      }
+    } catch {}
   }
 
   async save(patch: Partial<StoredSession>): Promise<void> {

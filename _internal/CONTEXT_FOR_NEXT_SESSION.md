@@ -18,7 +18,7 @@ A later production dry run found three targeted reliability blockers, recorded
 in section 6.0. Fix only those and the related follow-up items, then re-run the
 judge path in full before you push.
 
-**Frozen at:** `a22d722`, on `main`, live at https://sante-chi.vercel.app
+**Frozen at:** `1e21bdf`, on `main`, live at https://sante-chi.vercel.app
 
 **Earlier judge path, verified end to end on this build** (375px, fresh browser, no
 account): landing → Try the demo → three-step orientation → check-in (four
@@ -32,7 +32,7 @@ That pass did not exercise the low-capacity shortcut or wait on a selected
 strength adaptation. The later 390px run did, and section 6.0 is authoritative
 for the remaining work.
 
-**Two things this freeze pass found and fixed, both invisible from inside a
+**Four things this freeze pass found and fixed, all invisible from inside a
 normal dev loop:**
 
 1. `metadataBase` was never set, so every Open Graph and Twitter image URL
@@ -47,6 +47,16 @@ normal dev loop:**
    per identity. **This was the single most important path in the product and
    it was silently broken in production.** If you change anything about
    identity, storage keys or the check-in, walk this path by hand.
+
+3. A fresh demo was told "you use calm mode" among its adaptation reasons
+   while the calm switch on the same screen read off. The demo profile is
+   seeded with `nd_mode` true and the adaptation is built server-side from
+   that profile. The client now reconciles the two for a demo identity that
+   has never set a preference. **The seed is still wrong and is Serene's:**
+   `0003_demo_seed.sql` inserts `nd_mode true`.
+
+4. The floating calm control was 40px tall and three links on Home were 20px,
+   against a 44px minimum. Nothing on any screen is under 44 now.
 
 **Known and accepted for judging** — none of these are bugs to fix under time
 pressure, but do not claim otherwise in the submission:

@@ -516,6 +516,69 @@ export const COLLECTIONS: Collection[] = [
   { id: "travel", title: "Travel", blurb: "A hotel room and no equipment.", accent: "moss" },
 ];
 
+/* ------------------------------------------------------------------ *
+ * Intent.
+ *
+ * Explore used to open onto every collection and then the entire catalogue,
+ * which is a fine way to browse on a good day and a wall of decisions on a bad
+ * one. These are the reasons a person actually arrives, in her words rather
+ * than ours, and each one resolves to a handful of sessions instead of a
+ * category to go and read.
+ *
+ * "Something familiar" and "Surprise me" are not filters and are handled by
+ * the view, since one needs to know what she has saved and the other needs to
+ * pick differently each time.
+ * ------------------------------------------------------------------ */
+
+export type Intent = {
+  id: string;
+  label: string;
+  blurb: string;
+  /** Absent for the two that depend on the person rather than the catalogue. */
+  match?: (w: Workout) => boolean;
+};
+
+export const INTENTS: Intent[] = [
+  {
+    id: "ten-minutes",
+    label: "I have ten minutes",
+    blurb: "Short enough that starting is the only hard part.",
+    match: (w) => w.duration_minutes <= 10,
+  },
+  {
+    id: "overloaded",
+    label: "I feel overloaded",
+    blurb: "Quiet, few transitions, nothing that clatters.",
+    match: (w) => w.sensory_load === "low",
+  },
+  {
+    id: "gentle",
+    label: "I need gentle movement",
+    blurb: "Less load, on purpose, with nothing to prove.",
+    match: (w) => w.intensity === "low",
+  },
+  {
+    id: "strength",
+    label: "I want strength",
+    blurb: "Something that asks a bit of you.",
+    match: (w) => w.intensity !== "low",
+  },
+  {
+    id: "no-equipment",
+    label: "No equipment",
+    blurb: "Just you, and maybe a wall.",
+    match: (w) => w.equipment.length === 0,
+  },
+  { id: "familiar", label: "Something familiar", blurb: "What you saved or planned." },
+  { id: "surprise", label: "Surprise me", blurb: "One session, chosen for you." },
+];
+
+export function workoutsForIntent(id: string): Workout[] {
+  const intent = INTENTS.find((i) => i.id === id);
+  if (!intent?.match) return [];
+  return WORKOUTS.filter(intent.match);
+}
+
 export function workoutById(id: string): Workout | undefined {
   return WORKOUTS.find((w) => w.id === id);
 }

@@ -45,9 +45,24 @@ now this part is about what happens when things break . The model can time out ,
 now you all must be wondering why does this part even matters? 
 it basically proves that the app will work even if AI switched off. Safety and a usable session dont depends on the model answering and thats basically the whole crux of the product. 
 
-The honest part we are going to include is : 
+## The honest part we are going to include is : 
 
 the backup plan sometimes says "we shortened today's session " even on days its not kinda awkward and a very restrictive profile can sometimes produce a plan with zero movements , we wrote those down openly and labelled them clearly that those and copy and edge case bugs not some error-leak bugs. no error details reaches the user either way . so we are honestly still claming that " failure dont leak" .
 
 ## Dependency audit
 npm flagged one critical in Next (middleware auth-bypass, CVE-2025-29927). Not reachable — no middleware in the codebase, and authorisation is enforced in Postgres RLS and column grants, not at the edge. Reachable risk limited to RSC denial-of-service (availability only, behind Vercel). Pinned deliberately on 14.2 for judging; major upgrade deferred.
+
+## Log search on deployed app:
+red_flag, service_role, Bearer, discomfort all return no results. Only match for "energy" is the workout route name w_low_energy_flow, not check-in data. persist.ts logs error strings only.
+
+## IDOR: Changing record IDs cannot access another user's record
+
+signed it as anaymous user through anaon key user B by exact id (00e5173b...). Returned 0 rows, error null. RLS blocks direct-id access to other users' records even when the id is known.
+
+## Input validation
+
+both the check-in and luna's response are both Zod-validated and the recent feedback is loaded server-side from the user own rows that goes through getRecentFeedback(userid,sb) now where userID comes from verified bearer token not the client body so it cannot be injected at all and highly constrained.
+the known gap and tracked : fitRequest and thecheckin request reach the adaption without even gettin parsed by the schemas so this doesnt breach the safety boundary obviously computeReadiness runs in ordinary code before the
+model, and violations() re-checks the model's output after, so an injected
+fitRequest cannot widen a constraint or introduce a disallowed movement.
+Fix queued: length-bound fitRequest, parse checkin/plan before use

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useModalFocus } from "@/lib/useModalFocus";
 import type { ReadinessCheckin, RedFlag } from "@/types/domain";
 import CapacityBloom, { toBloom } from "./CapacityBloom";
 
@@ -56,9 +57,11 @@ export default function CheckInSheet({
       setStep(0);
       setValues({ energy: 3, discomfort: 3, mood: 3, sensory_load: 3 });
       setFlags([]);
-      panel.current?.focus();
     }
   }, [open]);
+
+  /* Focus into the sheet, trapped inside it, and handed back on close. */
+  useModalFocus(open, panel);
 
   /* Escape closes, and the page behind should not scroll under the sheet. */
   useEffect(() => {

@@ -185,11 +185,6 @@ export const COLLECTIONS: Collection[] = [
   },
 ];
 
-export function collectionMovements(id: string): Movement[] {
-  const c = COLLECTIONS.find((x) => x.id === id);
-  return c ? MOVEMENTS.filter(c.match) : [];
-}
-
 /* The rest of the library.
  *
  * Each movement carries enough to be useful on its own: an instruction someone
@@ -268,16 +263,6 @@ export const TODAYS_PLAN: DailyPlan = {
   ),
   movements: TODAYS_MOVEMENTS,
 };
-
-/**
- * Every tag the catalogue actually uses.
- *
- * Derived rather than hand-written, so it cannot drift when a movement is
- * added.
- */
-export const MOVEMENT_TAGS: readonly string[] = [
-  ...new Set(MOVEMENTS.flatMap((m) => m.tags)),
-];
 
 /**
  * The only tags the "anything else going on today" answers can produce.

@@ -58,7 +58,12 @@ export default function Today() {
       const existing = await store.load();
       const s = existing ?? (await store.createSession(TODAYS_PLAN));
       setSession(s);
-      setStage((s.stage as Stage) || "plan");
+      /* "working" only means something while a request is actually in flight,
+         and the streamed steps that make that screen legible are not saved.
+         Restoring into it after a reload left people on a page that said
+         "adapting your plan" for ever, with nothing running and no way out. */
+      const saved = (s.stage as Stage) || "plan";
+      setStage(saved === "working" ? "plan" : saved);
 
       /* Someone checked in from Home. Run it now rather than making them
          answer the same four questions again on this page. */
@@ -348,8 +353,45 @@ export default function Today() {
           <div className="mt-4">
             <AgentEvents events={events} done={!streaming} />
           </div>
+
+          {/* A failed request used to end here, with an error line and no way
+              out of the screen. Offline is the likeliest reason someone sees
+              this, so both options work without the network. */}
+          {!streaming && events.some((e) => e.step === "error") && (
+            <div className="mt-5 border-t border-ink/10 pt-4">
+              <p className="text-sm text-ink-soft">
+                Nothing was lost. Your answers are still here, so this can be tried again, or
+                you can go ahead with the session you already had.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2.5">
+                <button
+                  onClick={() => session.last_checkin && adapt(session.last_checkin)}
+                  className="rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
+                >
+                  Try again
+                </button>
+                <button
+                  onClick={() => goTo("plan")}
+                  className="rounded-2xl bg-surface px-5 py-3.5 font-bold ring-1 ring-ink/15"
+                >
+                  Back to today
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       )}
+
+      {/* The one announcement a screen reader needs, kept short on purpose.
+          The result section below is long, and making the whole thing live
+          would read the entire plan aloud every time a chip is tapped. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {stage === "blocked"
+          ? `Paused for today. ${blockedReason ?? ""}`
+          : stage === "result" && result
+          ? `Your plan flexed. ${result.original.total_minutes} minutes across ${result.original.movements.length} movements became ${result.adapted.total_minutes} minutes across ${result.adapted.movements.length}, at ${result.adapted.intensity} intensity. ${result.reasons.join(" ")}`
+          : ""}
+      </p>
 
       {stage === "blocked" && (
         <section className="mt-8 rounded-2xl bg-terracotta/10 p-6">

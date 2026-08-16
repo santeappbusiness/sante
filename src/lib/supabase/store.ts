@@ -125,20 +125,27 @@ export class SupabaseStore implements Store {
    */
   private async bootstrap(uid: string): Promise<void> {
     if (SupabaseStore.bootstrapped.has(uid)) return;
-    SupabaseStore.bootstrapped.add(uid);
 
     const sb = getSupabase();
     if (!sb) return;
 
     try {
       const { data } = await sb.auth.getSession();
-      if (data.session) {
-        await fetch("/api/bootstrap", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-        });
-      }
-    } catch {}
+      if (!data.session) return;
+
+      const res = await fetch("/api/bootstrap", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+      });
+      /* Marked done only once it actually succeeded. Setting the flag first
+         meant one dropped request left the person with no profile, no plan and
+         no history for the rest of the tab, with nothing retrying and nothing
+         saying so. The route is idempotent, so trying again costs nothing. */
+      if (res.ok) SupabaseStore.bootstrapped.add(uid);
+    } catch {
+      /* Offline or the request was cut off. Deliberately not marked, so the
+         next navigation tries again. */
+    }
   }
 
   async save(patch: Partial<StoredSession>): Promise<void> {

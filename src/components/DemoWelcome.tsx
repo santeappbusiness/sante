@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useModalFocus } from "@/lib/useModalFocus";
 import { Asterisk, Flower } from "./BrandShapes";
 
 /**
@@ -19,6 +20,7 @@ const KEY = "sante-demo-welcome";
 
 export default function DemoWelcome({ name }: { name: string }) {
   const [open, setOpen] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -42,6 +44,8 @@ export default function DemoWelcome({ name }: { name: string }) {
     setOpen(false);
   }
 
+  useModalFocus(open, panel);
+
   if (!open) return null;
 
   return (
@@ -53,6 +57,8 @@ export default function DemoWelcome({ name }: { name: string }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="demo-welcome-title"
+        ref={panel}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className="sheet-rise relative w-full max-w-md overflow-hidden rounded-[26px] bg-surface p-7 shadow-[0_30px_70px_-30px_rgba(47,58,51,0.5)]"
       >
@@ -94,7 +100,6 @@ export default function DemoWelcome({ name }: { name: string }) {
 
         <button
           onClick={dismiss}
-          autoFocus
           className="relative mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-coral px-6 py-4 text-lg font-bold text-coral-on"
         >
           <span aria-hidden="true">

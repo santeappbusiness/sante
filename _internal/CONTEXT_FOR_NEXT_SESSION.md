@@ -424,7 +424,42 @@ Extend it deliberately, not decoratively:
 
 </details>
 
-### 6.5 Code review and hardening
+### 6.5 DONE: code review and hardening
+
+Run and evidenced, not asserted. Findings and fixes:
+
+- **Client bundle** has no secret in it. Only `sb_publishable` and the anon key
+  reach the browser. The one `sb_secret` string in a chunk is supabase-js's own
+  key-format check, not a value.
+- **Service-role key** is imported in four server-only modules and no client
+  component.
+- **Contrast**: `slate` and `moss-deep` both failed WCAG AA at body size on
+  every ground they were used on, worst 3.26:1. Both darkened within the same
+  hue in `tailwind.config.ts`; every text pair now clears 4.5:1. Anyone changing
+  the palette should re-run that check.
+- **Focus**: dialogs had no trap and never returned focus. `src/lib/useModalFocus.ts`
+  now does both for the check-in sheet and the demo welcome. Verified: Tab wraps
+  in both directions, Escape closes, focus returns to the trigger, scroll unlocks.
+- **`aria-live`**: the adaptation announced nothing. A short visually hidden
+  status now reads the before, the after, and the reasons. Deliberately not the
+  whole section, which would read the entire plan aloud on every chip tap.
+- **Bootstrap** marked itself successful before the request returned, so one
+  dropped call left a person with no profile, plan or history for the rest of
+  the tab, retrying nothing and saying nothing. It only records success now.
+- **Offline** used to be a dead end: an error line on the steps screen with no
+  way forward. There is a retry and a way back, both of which work without the
+  network.
+- **`stage: "working"` was persisted.** Reloading mid-adaptation restored a
+  screen that said "adapting your plan" for ever, because the streamed steps
+  that make it legible are not saved. It restores to "plan" instead.
+- **Dead code** removed: `ALL_MOVEMENTS`, `MOVEMENT_TAGS`, `collectionMovements`.
+  No `console.log` in shipped code.
+
+Still open, and worth doing after judging rather than before: `/api/bootstrap`
+has no rate limit (it writes rows but calls no model), and there are no
+automated tests, so every claim above is a point-in-time check by hand.
+
+<details><summary>Original checklist</summary>
 
 Do a real pass, not a skim. Report findings with severity and a concrete failure
 scenario, then fix them.
@@ -480,6 +515,8 @@ scenario, then fix them.
 - `npm run typecheck` and `npm run build` must both pass before any commit.
 - No `console.log` left in shipped code.
 - Dead code and unused exports.
+
+</details>
 
 ### 6.6 Calm mode as a constraint (done, but know how it works)
 

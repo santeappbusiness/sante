@@ -1,5 +1,5 @@
 import type { DailyPlan } from "@/types/domain";
-import { MOVEMENTS, movementById } from "./demo-data";
+import { movementById } from "./demo-data";
 import type { Workout } from "./workouts";
 
 /**
@@ -180,4 +180,3 @@ export function addToDay(day: string, workout: Workout): PlannedDay[] {
   return week;
 }
 
-export const ALL_MOVEMENTS = MOVEMENTS;

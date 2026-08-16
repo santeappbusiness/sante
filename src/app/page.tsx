@@ -127,7 +127,7 @@ export default function Landing() {
 
             <ul className="mt-8 grid gap-3">
               {[
-                ["What you planned", "35 min · moderate · 5 movements"],
+                ["What you planned", "30 min · moderate · 5 movements"],
                 ["What today needed", "12 min · low · 3 movements"],
               ].map(([label, figure], i) => (
                 <li

@@ -51,6 +51,32 @@ export async function POST(req: NextRequest) {
     { onConflict: "id", ignoreDuplicates: true }
   );
 
+  /**
+   * The baseline plan, kept in step with the app rather than written once.
+   *
+   * Today reads this row to show "what you planned", while the adapt route
+   * builds its comparison from the app's own plan. Inserting only when the row
+   * was missing meant anyone with an older session saw one plan on screen and
+   * had a different one adapted underneath them, which makes the before and
+   * after meaningless.
+   *
+   * Safe to overwrite only because nothing lets a person edit their baseline
+   * yet. The moment that exists, this has to become "insert if missing" again.
+   */
+  const baseline = {
+    profile_id: profileId,
+    title: TODAYS_PLAN.title,
+    items: TODAYS_PLAN.movements.map((m) => ({
+      id: m.id,
+      name: m.name,
+      minutes: m.minutes,
+      intensity: m.intensity,
+    })),
+    total_minutes: TODAYS_PLAN.total_minutes,
+    intensity: TODAYS_PLAN.intensity,
+    is_baseline: true,
+  };
+
   const { data: existing } = await admin
     .from("plans")
     .select("id")
@@ -58,20 +84,10 @@ export async function POST(req: NextRequest) {
     .eq("is_baseline", true)
     .maybeSingle();
 
-  if (!existing) {
-    await admin.from("plans").insert({
-      profile_id: profileId,
-      title: TODAYS_PLAN.title,
-      items: TODAYS_PLAN.movements.map((m) => ({
-        id: m.id,
-        name: m.name,
-        minutes: m.minutes,
-        intensity: m.intensity,
-      })),
-      total_minutes: TODAYS_PLAN.total_minutes,
-      intensity: TODAYS_PLAN.intensity,
-      is_baseline: true,
-    });
+  if (existing) {
+    await admin.from("plans").update(baseline).eq("id", existing.id);
+  } else {
+    await admin.from("plans").insert(baseline);
   }
 
   /* Anonymous visitors are the demo, and the demo should not look like an

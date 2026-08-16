@@ -24,9 +24,13 @@ export const maxDuration = 60;
  * then validate, then save.
  */
 
-/* A blunt per-session cap. A public button that triggers model calls is an
+/* A blunt per-identity cap. A public button that triggers model calls is an
    open wallet, and this is the cheap version of closing it. Serene owns the
-   durable one. */
+   durable one.
+
+   Keyed on the authenticated user, never on anything from the body. It used to
+   read session_id off the request, which the caller writes, so a fresh string
+   per call reset the counter and the cap counted nothing. */
 const CALLS = new Map<string, { count: number; first: number }>();
 const MAX_PER_SESSION = 10;
 const WINDOW_MS = 60 * 60 * 1000;
@@ -111,20 +115,35 @@ function widenIfEmptied(result: ReturnType<typeof computeReadiness>, add: string
 }
 
 export async function POST(req: NextRequest) {
+  /* Identity first, before the body is read and long before a model is
+     reachable. Every visitor has a token, including the demo: opening Santé
+     signs you in anonymously, so requiring one turns nobody away. What it does
+     turn away is a script with a URL and no session, which is what an
+     unauthenticated route was handing an unlimited number of model calls to.
+
+     Anonymous users are accepted deliberately. The demo is the product, and a
+     gate that only let signed-up accounts through would close it. */
+  const profileId = await resolveUser(req.headers.get("authorization"));
+  if (!profileId) {
+    return Response.json(
+      { error: "Open Santé in a browser to build today's plan." },
+      { status: 401 }
+    );
+  }
+
+  /* Now that the caller is known, the cap has something real to count. */
+  if (overLimit(profileId)) {
+    return Response.json(
+      { error: "That is a lot of adaptations for one session. Try again later." },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = readinessCheckinSchema.safeParse(body?.checkin);
 
   if (!parsed.success) {
     return Response.json({ error: "That check-in did not look right." }, { status: 400 });
-  }
-
-  const sessionId: string = typeof body?.session_id === "string" ? body.session_id : "anonymous";
-
-  if (overLimit(sessionId)) {
-    return Response.json(
-      { error: "That is a lot of adaptations for one session. Try again later." },
-      { status: 429 }
-    );
   }
 
   const checkin = parsed.data;
@@ -185,12 +204,10 @@ export async function POST(req: NextRequest) {
       const emit = (event: AgentEvent) => send("agent", event);
 
       try {
-        /* Identity from the caller's token, never from the request body. */
-        const profileId = await resolveUser(req.headers.get("authorization"));
-
-        /* Adapt for whoever this actually is. Falling back to the demo persona
-           keeps the app working for a visitor we cannot identify. */
-        const stored = profileId ? await loadProfile(profileId) : null;
+        /* Adapt for whoever this actually is. A brand new visitor is
+           authenticated but has no profile row yet, and falls back to the demo
+           persona rather than to nothing. */
+        const stored = await loadProfile(profileId);
         /* Built field by field rather than spread over MAYA. Spreading left a
            signed-in person carrying Maya's id, her is_demo flag, and the
            paragraph she wrote about herself, none of which are theirs. The
@@ -198,7 +215,7 @@ export async function POST(req: NextRequest) {
            a fictional person's. */
         const profile: UserProfile = stored
           ? {
-              id: profileId!,
+              id: profileId,
               display_name: stored.display_name ?? "",
               goal: stored.goal ?? "",
               preferred_minutes: stored.preferred_minutes ?? 30,
@@ -247,11 +264,7 @@ export async function POST(req: NextRequest) {
             };
           }
         }
-        emit({
-          step: "authenticated",
-          label: "Opened your plan for today",
-          detail: profileId ? undefined : "this session only",
-        });
+        emit({ step: "authenticated", label: "Opened your plan for today" });
         emit({
           step: "safety_checked",
           label: "Ran the safety check",
@@ -263,7 +276,7 @@ export async function POST(req: NextRequest) {
         if (result.blocked) {
           /* The verdict is recorded even though no plan is produced, so a
              paused day is still part of the person's history. */
-          if (profileId) await saveCheckin(profileId, checkin, result);
+          await saveCheckin(profileId, checkin, result);
           send("blocked", { reason: result.block_reason });
           send("done", { ok: true });
           return;
@@ -279,23 +292,20 @@ export async function POST(req: NextRequest) {
           signal: req.signal,
         });
 
+        const checkinId = await saveCheckin(profileId, checkin, result);
+        /* No check-in row means no adaptation row: the table requires the link,
+           and an adaptation with no recorded cause is not worth storing. */
         let adaptationId: string | null = null;
-        if (profileId) {
-          const checkinId = await saveCheckin(profileId, checkin, result);
-          /* No check-in row means no adaptation row: the table requires the
-             link, and an adaptation with no recorded cause is not worth
-             storing anyway. */
-          if (checkinId)
-            adaptationId = await saveAdaptation({
-              profileId,
-              checkinId,
-              original: plan,
-              adapted: outcome.adapted,
-              reasons: outcome.reasons,
-              usedFallback: outcome.used_fallback,
-              result,
-            });
-        }
+        if (checkinId)
+          adaptationId = await saveAdaptation({
+            profileId,
+            checkinId,
+            original: plan,
+            adapted: outcome.adapted,
+            reasons: outcome.reasons,
+            usedFallback: outcome.used_fallback,
+            result,
+          });
 
         emit({
           step: "saved",

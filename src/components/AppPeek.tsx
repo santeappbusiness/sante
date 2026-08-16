@@ -124,7 +124,7 @@ export function PeekAdaptation() {
         <div className="rounded-xl bg-surface p-2.5 ring-1 ring-ink/10">
           <p className="text-[7px] font-bold uppercase tracking-wider text-slate">Planned</p>
           <p className="mt-0.5 font-display text-base leading-tight">
-            35 min
+            30 min
             <br />
             <span className="text-[11px]">moderate</span>
           </p>

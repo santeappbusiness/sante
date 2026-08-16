@@ -108,20 +108,6 @@ export function movementById(id: string): Movement | undefined {
   return MOVEMENTS.find((m) => m.id === id);
 }
 
-/** What Maya's plan says before she checks in. */
-export const TODAYS_PLAN: DailyPlan = {
-  id: "plan-demo-today",
-  title: "Today's session",
-  total_minutes: 35,
-  intensity: "moderate",
-  movements: [
-    movementById("mv_walk")!,
-    movementById("mv_squat")!,
-    movementById("mv_lunge")!,
-    movementById("mv_core")!,
-    movementById("mv_jumps")!,
-  ],
-};
 
 /* A deeper catalogue, so Explore has something real to show and the agent has
    genuine choices rather than the same five options every time. */
@@ -245,6 +231,43 @@ const LIBRARY: Movement[] = [
 ];
 
 MOVEMENTS.push(...LIBRARY);
+
+/** What Maya's plan says before she checks in. */
+/**
+ * The session Maya intended to do today.
+ *
+ * Both numbers are computed from the movements rather than written down. They
+ * used to be typed by hand and said 35 minutes at moderate over a list that
+ * came to 29 and contained a high intensity movement, so every adaptation
+ * reported a six minute reduction that had not happened, and the fallback
+ * described easy sessions as high because it read the day's ceiling. A plan
+ * that misreports itself makes the whole before and after untrustworthy, which
+ * is the one thing this product is selling.
+ *
+ * Jump squats are gone as well. Maya's saved preferences say she avoids
+ * jumping, so a baseline plan built around something she never does was a
+ * contradiction sitting in the demo's first screen.
+ */
+const TODAYS_MOVEMENTS: Movement[] = [
+  movementById("mv_walk")!,
+  movementById("mv_lunge")!,
+  movementById("mv_squat")!,
+  movementById("mv_step_up")!,
+  movementById("mv_stretch")!,
+];
+
+const INTENSITY_RANK = { low: 1, moderate: 2, high: 3 } as const;
+
+export const TODAYS_PLAN: DailyPlan = {
+  id: "plan-demo-today",
+  title: "Today's session",
+  total_minutes: TODAYS_MOVEMENTS.reduce((sum, m) => sum + m.minutes, 0),
+  intensity: TODAYS_MOVEMENTS.reduce<Movement["intensity"]>(
+    (worst, m) => (INTENSITY_RANK[m.intensity] > INTENSITY_RANK[worst] ? m.intensity : worst),
+    "low"
+  ),
+  movements: TODAYS_MOVEMENTS,
+};
 
 /**
  * Every tag the catalogue actually uses.

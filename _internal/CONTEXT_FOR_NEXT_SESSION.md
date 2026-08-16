@@ -403,12 +403,19 @@ scenario, then fix them.
   check-in insert is blocked (`42501`). Prove it again after any schema change.
 - Confirm the service-role key is only ever imported in server-side modules.
   Grep for `getSupabaseAdmin` and check every call site runs on the server.
-- `/api/adapt` and `/api/bootstrap` have no rate limiting. Both cost money or
-  write rows. At minimum, note the risk.
+- `/api/adapt` now requires a bearer token and caps calls per authenticated
+  identity. Anonymous tokens are accepted on purpose: the demo is the product,
+  and a gate that only passed signed-up accounts would close it. Do not "tidy"
+  that into a signed-up-only check. `/api/bootstrap` is still uncapped; it
+  writes rows but calls no model.
 - Check that no secret can reach the client bundle. Only `NEXT_PUBLIC_*` should
   be readable in the browser.
-- Confirm the free-text `context` field cannot be used to steer Luna past a
-  constraint. It is user input that reaches a prompt.
+- Every value arriving in the adapt request body is bounded now: the free text
+  is trimmed and capped, `recent_feedback` is parsed against the verdict enum
+  before it can reach the model as tool output, and `context_tags` accepts only
+  the two tags that feature can generate. Keep that property when adding
+  fields. The rule is that anything from a body is either parsed against a
+  schema or not used.
 
 **Correctness**
 - Any `-mt-*` pull-up without `relative z-10`.

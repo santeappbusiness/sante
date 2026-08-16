@@ -29,7 +29,7 @@ const KEY = "sante-week";
 
 export function defaultWeek(): PlannedDay[] {
   return [
-    { day: "Monday", kind: "session", title: "Lower body strength", minutes: 35, intensity: "moderate", movement_ids: ["mv_walk", "mv_squat", "mv_lunge", "mv_core", "mv_jumps"] },
+    { day: "Monday", kind: "session", title: "Lower body strength", minutes: 30, intensity: "moderate", movement_ids: ["mv_walk", "mv_lunge", "mv_squat", "mv_step_up", "mv_stretch"] },
     { day: "Tuesday", kind: "recovery", title: "Mobility and unwind", minutes: 15, intensity: "low", movement_ids: ["mv_cat_cow", "mv_side_bend", "mv_breath"] },
     { day: "Wednesday", kind: "session", title: "Full body", minutes: 30, intensity: "moderate", movement_ids: ["mv_march", "mv_glute_bridge", "mv_row", "mv_dead_bug"] },
     { day: "Thursday", kind: "rest", title: "Rest", minutes: 0, intensity: "low", movement_ids: [] },

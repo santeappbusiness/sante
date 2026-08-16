@@ -23,7 +23,7 @@ least likely to be able to afford the hardware that would help.
 You open the app and see the session you intended to do today:
 
 ```
-35 min · moderate · 5 movements
+30 min · moderate · 5 movements
 ```
 
 You answer four questions on a slider: energy, discomfort, mood, sensory load. It takes about

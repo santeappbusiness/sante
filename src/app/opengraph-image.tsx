@@ -59,7 +59,7 @@ export default async function Image() {
             <div style={{ fontSize: 20, color: "#6E7D83", fontFamily: "sans-serif" }}>
               Today&apos;s plan
             </div>
-            <div style={{ fontSize: 46, marginTop: 6 }}>35 min · moderate</div>
+            <div style={{ fontSize: 46, marginTop: 6 }}>30 min · moderate</div>
           </div>
 
           <div style={{ fontSize: 54, color: "#F97C50" }}>→</div>

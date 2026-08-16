@@ -10,6 +10,7 @@ import type {
   ReadinessCheckin,
 } from "@/types/domain";
 import { MAYA, MOVEMENTS, TODAYS_PLAN } from "@/lib/demo-data";
+import { planForWorkoutId } from "@/lib/workouts";
 import { getStore, NOT_PERSISTED, type StoredSession } from "@/lib/storage";
 import { getSupabase } from "@/lib/supabase/client";
 import ReadinessRitual from "@/components/ReadinessRitual";
@@ -17,6 +18,7 @@ import CapacityBloom, { toBloom } from "@/components/CapacityBloom";
 import PlanDiff from "@/components/PlanDiff";
 import AgentEvents from "@/components/AgentEvents";
 import SessionPlayer from "@/components/SessionPlayer";
+import SessionOpening from "@/components/SessionOpening";
 import MakeItFit from "@/components/MakeItFit";
 import MemoryProposal from "@/components/MemoryProposal";
 import AppNav from "@/components/AppNav";
@@ -35,6 +37,7 @@ const MOVEMENTS_BY_EASE = [...MOVEMENTS]
 
 export default function Today() {
   const store = useRef(getStore()).current;
+  const startedRef = useRef(false);
 
   const [session, setSession] = useState<StoredSession | null>(null);
   const [stage, setStage] = useState<Stage>("plan");
@@ -54,9 +57,48 @@ export default function Today() {
   /* One ephemeral session per visitor. Two judges opening the link at the same
      time each get their own Maya. */
   useEffect(() => {
+    /* Once, even though React runs effects twice in development. Two runs both
+       loading and both writing the stage raced: the second could read the
+       session before the first had saved the chosen workout to it, and then
+       overwrite the stage with whatever the previous session ended on. Landing
+       on a stale "we paused today" after picking a workout is the worst
+       possible version of that. */
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     (async () => {
+      /* Read before any await, so both runs see the same URL. */
+      const params = new URLSearchParams(window.location.search);
+      const startId = params.get("start");
+      const beginNow = params.has("begin");
+
       const existing = await store.load();
-      const s = existing ?? (await store.createSession(TODAYS_PLAN));
+      let s = existing ?? (await store.createSession(TODAYS_PLAN));
+
+      /* A workout arrived from Explore. It becomes this day's plan, and the id
+         is kept on the session so every later adaptation is still about the
+         thing they picked. Without this, choosing "Lower body strength" and
+         adapting handed back a version of the baseline session instead. */
+      const chosen = planForWorkoutId(startId);
+      if (chosen) {
+        const picked = {
+          plan: chosen,
+          workout_id: startId as string,
+          /* A different workout is a different day: last run's result and
+             progress do not belong to it. */
+          result: null,
+          completed_movement_ids: [],
+          /* "Start session" goes straight into it; "Adapt this session" lands
+             on the plan so the check-in is the next thing they see. */
+          stage: beginNow ? "session" : "plan",
+        } satisfies Partial<StoredSession>;
+        await store.save(picked);
+        s = { ...s, ...picked };
+        /* Drop the parameter so a refresh does not silently reset a session
+           already under way. */
+        window.history.replaceState(null, "", "/today");
+      }
+
       setSession(s);
       /* "working" only means something while a request is actually in flight,
          and the streamed steps that make that screen legible are not saved.
@@ -69,7 +111,7 @@ export default function Today() {
          answer the same four questions again on this page. */
       try {
         const pending = sessionStorage.getItem("sante-pending-checkin");
-        if (pending && new URLSearchParams(window.location.search).has("adapt")) {
+        if (pending && params.has("adapt")) {
           sessionStorage.removeItem("sante-pending-checkin");
           setPendingCheckin(JSON.parse(pending));
         }
@@ -101,6 +143,13 @@ export default function Today() {
   const [memoryBusy, setMemoryBusy] = useState(false);
   const [memoryError, setMemoryError] = useState<string | null>(null);
 
+  /* The opening beat plays once per entry into a session, not on every render
+     of it, so returning mid-session does not replay the flower. */
+  const [opened, setOpened] = useState(false);
+  useEffect(() => {
+    if (stage !== "session") setOpened(false);
+  }, [stage]);
+
   /* Leaving the completion screen clears all of it, so a later session never
      opens holding the previous one's error or its rated state. */
   useEffect(() => {
@@ -113,9 +162,16 @@ export default function Today() {
     setMemoryError(null);
   }, [stage]);
 
-  /* Whatever they chose last time wins over the profile default. */
+  /* Whatever they chose last time wins over the profile default.
+
+     `calmKnown` matters more than it looks: nd starts on Maya's default, so
+     anything that branches on it during the first render branches on a guess.
+     The session opening did exactly that and skipped itself every time, since
+     calm mode means "no transition". */
+  const [calmKnown, setCalmKnown] = useState(false);
   useEffect(() => {
     setNd(readCalm(MAYA.neurodivergent_mode));
+    setCalmKnown(true);
   }, []);
 
   /* An anonymous visitor is Maya. A signed-in person is themselves. */
@@ -206,6 +262,9 @@ export default function Today() {
           body: JSON.stringify({
             checkin: payload,
             session_id: session.session_id,
+            /* The workout they chose, if they chose one. An id, never a plan:
+               the server resolves it from our own catalogue. */
+            workout_id: session.workout_id,
             recent_feedback: session.feedback,
             fit,
             request,
@@ -563,7 +622,11 @@ export default function Today() {
         </section>
       )}
 
-      {stage === "session" && (
+      {stage === "session" && !opened && calmKnown && (
+        <SessionOpening plan={plan} quiet={nd} onBegin={() => setOpened(true)} />
+      )}
+
+      {stage === "session" && opened && (
         <div className="mt-8">
           <SessionPlayer
             plan={plan}

@@ -11,7 +11,17 @@ import {
 import { howToUrl } from "@/lib/demo-data";
 import { addToDay, loadWeek, todayName, type PlannedDay } from "@/lib/week";
 import AppNav from "@/components/AppNav";
-import { Blob, Sprig } from "@/components/BrandShapes";
+import { Asterisk, Blob, Sprig } from "@/components/BrandShapes";
+import {
+  EquipmentIcon,
+  IntensityIcon,
+  HelpIcon,
+  MovementsIcon,
+  PlaceIcon,
+  PlayIcon,
+  SensoryIcon,
+  TimeIcon,
+} from "@/components/ControlIcons";
 import SaveButton from "@/components/SaveButton";
 
 /**
@@ -65,20 +75,34 @@ export default function WorkoutDetail() {
             </h1>
             <p className="mt-3 max-w-lg text-lg text-ink-soft">{workout.description}</p>
 
-            <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
-              {[
-                ["Duration", `${workout.duration_minutes} min`],
-                ["Intensity", workout.intensity],
-                ["Movements", String(workout.blocks.length)],
-                ["Sensory load", workout.sensory_load],
-                ["Equipment", workout.equipment.length ? workout.equipment.join(", ") : "None"],
-                ["Where", workout.environment.join(", ")],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <dt className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
-                    {label}
-                  </dt>
-                  <dd className="mt-0.5 font-mono text-sm capitalize">{value}</dd>
+            {/* One icon per fact, from the control family, so duration here
+                reads as the same idea as duration in the player. The icons sit
+                beside the words rather than replacing them. */}
+            <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-4">
+              {(
+                [
+                  [TimeIcon, "Duration", `${workout.duration_minutes} min`],
+                  [IntensityIcon, "Intensity", workout.intensity],
+                  [MovementsIcon, "Movements", String(workout.blocks.length)],
+                  [SensoryIcon, "Sensory load", workout.sensory_load],
+                  [
+                    EquipmentIcon,
+                    "Equipment",
+                    workout.equipment.length ? workout.equipment.join(", ") : "None",
+                  ],
+                  [PlaceIcon, "Where", workout.environment.join(", ")],
+                ] as Array<[typeof TimeIcon, string, string]>
+              ).map(([Icon, label, value]) => (
+                <div key={label} className="flex items-start gap-2">
+                  <span aria-hidden="true" className="mt-0.5 shrink-0 text-moss-deep">
+                    <Icon size={18} />
+                  </span>
+                  <div>
+                    <dt className="text-xs font-bold uppercase tracking-[0.13em] text-slate">
+                      {label}
+                    </dt>
+                    <dd className="mt-0.5 font-mono text-sm capitalize">{value}</dd>
+                  </div>
                 </div>
               ))}
             </dl>
@@ -100,10 +124,16 @@ export default function WorkoutDetail() {
                 <Sprig size={38} />
               </span>
             </div>
+            {/* Carries the workout with it. Sending people to a bare /today
+                handed them the baseline session to adapt, so the thing they
+                had just chosen quietly vanished. */}
             <Link
-              href="/today"
-              className="mt-4 inline-block rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
+              href={`/today?start=${workout.id}`}
+              className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
             >
+              <span aria-hidden="true">
+                <Asterisk size={18} />
+              </span>
               Adapt this session
             </Link>
           </section>
@@ -132,9 +162,9 @@ export default function WorkoutDetail() {
                       target="_blank"
                       rel="noreferrer"
                       aria-label={`How to do ${movement.name}`}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-canvas font-bold text-ink-soft ring-1 ring-ink/15"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-canvas text-ink-soft ring-1 ring-ink/15 hover:ring-ink/30"
                     >
-                      ?
+                      <HelpIcon size={18} />
                     </a>
                   </div>
                   <p className="mt-2 text-sm text-ink-soft">{movement.instructions}</p>
@@ -163,7 +193,7 @@ export default function WorkoutDetail() {
                     setAdded(d.day);
                   }}
                   className={
-                    "rounded-full px-4 py-2 text-sm ring-1 " +
+                    "inline-flex min-h-[44px] items-center rounded-full px-4 py-2 text-sm ring-1 " +
                     (added === d.day
                       ? "bg-moss/40 font-bold ring-transparent"
                       : "bg-surface ring-ink/15 hover:ring-ink/30")
@@ -193,7 +223,7 @@ export default function WorkoutDetail() {
                   <Link
                     key={c.id}
                     href={`/explore/${c.id}`}
-                    className="rounded-full bg-surface px-4 py-2 text-sm ring-1 ring-ink/15"
+                    className="inline-flex min-h-[44px] items-center rounded-full bg-surface px-4 py-2 text-sm ring-1 ring-ink/15"
                   >
                     {c.title}
                   </Link>
@@ -203,33 +233,27 @@ export default function WorkoutDetail() {
           )}
         </div>
 
-        {/* Sticky start, mobile only, one clear action */}
+        {/* Sticky start, on every width. It used to be mobile only, which left
+            the desktop start action at the very bottom of a long page: the one
+            thing this page exists for was the last thing anyone could find. */}
         <div
-          className="fixed inset-x-0 bottom-[60px] z-20 border-t border-ink/10 bg-surface/95 px-5 py-3 backdrop-blur lg:hidden"
+          className="fixed inset-x-0 bottom-[60px] z-20 border-t border-ink/10 bg-surface/95 px-5 py-3 backdrop-blur lg:bottom-0 lg:left-56"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
         >
           <div className="mx-auto flex max-w-3xl items-center gap-3">
             <SaveButton workoutId={workout.id} />
             <Link
-              href={`/today?start=${workout.id}`}
-              className="flex-1 rounded-2xl bg-coral px-5 py-3.5 text-center font-bold text-coral-on"
+              href={`/today?start=${workout.id}&begin=1`}
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-2xl bg-coral px-5 py-3.5 text-center font-bold text-coral-on"
             >
+              <span aria-hidden="true">
+                <PlayIcon size={18} />
+              </span>
               Start session
             </Link>
           </div>
         </div>
 
-        <div className="mx-auto hidden max-w-3xl px-5 pt-8 lg:block">
-          <div className="flex items-center gap-3">
-            <SaveButton workoutId={workout.id} />
-            <Link
-              href={`/today?start=${workout.id}`}
-              className="rounded-2xl bg-coral px-6 py-3.5 font-bold text-coral-on"
-            >
-              Start session
-            </Link>
-          </div>
-        </div>
       </main>
       <AppNav />
     </>

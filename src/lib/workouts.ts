@@ -1,4 +1,4 @@
-import type { Intensity, Movement } from "@/types/domain";
+import type { DailyPlan, Intensity, Movement } from "@/types/domain";
 import { movementById } from "./demo-data";
 
 /**
@@ -533,6 +533,38 @@ export function workoutMovements(w: Workout): Array<{ movement: Movement; block:
   return w.blocks
     .map((block) => ({ movement: movementById(block.movement_id), block }))
     .filter((x): x is { movement: Movement; block: WorkoutBlock } => Boolean(x.movement));
+}
+
+/**
+ * A chosen workout, as the plan the day is built from.
+ *
+ * The one bridge between the library and the adaptation. Both the minutes and
+ * the intensity are read off the movements rather than off the workout's own
+ * headline numbers, so the plan a person is shown is the plan the constraint
+ * maths sees. Nothing here trusts a caller: the id is resolved against our own
+ * catalogue, which is why the server takes a workout id and never a plan.
+ */
+export function workoutPlan(w: Workout): DailyPlan {
+  const movements = workoutMovements(w).map(({ movement }) => movement);
+  const rank = { low: 1, moderate: 2, high: 3 } as const;
+
+  return {
+    id: `plan-${w.id}`,
+    title: w.title,
+    total_minutes: movements.reduce((sum, m) => sum + m.minutes, 0),
+    intensity: movements.reduce<Intensity>(
+      (worst, m) => (rank[m.intensity] > rank[worst] ? m.intensity : worst),
+      "low"
+    ),
+    movements,
+  };
+}
+
+/** The same, from an id, or nothing if the id is not one of ours. */
+export function planForWorkoutId(id: string | null | undefined): DailyPlan | null {
+  if (!id) return null;
+  const w = workoutById(id);
+  return w ? workoutPlan(w) : null;
 }
 
 /**

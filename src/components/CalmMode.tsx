@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Calm mode.
@@ -49,9 +49,21 @@ export default function CalmModeToggle({
 }) {
   const [open, setOpen] = useState(false);
 
+  /**
+   * Only persist a real change, never the first value we happen to render with.
+   *
+   * The pages that host this toggle start `value` on the demo persona's default
+   * and correct it a tick later, once localStorage and the profile have been
+   * read. Writing on mount meant the toggle echoed that placeholder straight
+   * back into storage and overwrote the person's actual choice, every single
+   * page load, before anything had a chance to read it. The attribute is
+   * presentational and still tracks every render.
+   */
+  const persisted = useRef(false);
   useEffect(() => {
     document.documentElement.setAttribute("data-nd", value ? "on" : "off");
-    writeCalm(value);
+    if (persisted.current) writeCalm(value);
+    else persisted.current = true;
   }, [value]);
 
   if (compact) {

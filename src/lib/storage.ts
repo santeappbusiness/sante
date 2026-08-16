@@ -27,6 +27,16 @@ export type StoredSession = {
   allowed_movements?: Movement[];
   /** Set once we have offered to remember something, so we ask only once. */
   memory_offered?: boolean;
+  /**
+   * The workout this day is built from, when someone chose one.
+   *
+   * Held on the session rather than read from the URL each time, because the
+   * choice has to survive a refresh and reach every path that adapts: the first
+   * run, a retry, "still too much" and Make It Fit. Only ever an id. The plan
+   * itself is resolved from our own catalogue, on the server, so choosing a
+   * workout can never smuggle in movements or minutes we did not write.
+   */
+  workout_id?: string;
   /** Facts about the last run, shown under "How Santé did that". */
   receipt?: unknown;
   plan: DailyPlan;

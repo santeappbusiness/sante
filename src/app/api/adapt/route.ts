@@ -9,6 +9,7 @@ import {
 import { allowedMovements, computeReadiness } from "@/lib/readiness";
 import { interpretRequest, LUNA_MODEL, runAdaptation } from "@/lib/luna";
 import { CONTEXT_TAGS, MAYA, TODAYS_PLAN } from "@/lib/demo-data";
+import { planForWorkoutId } from "@/lib/workouts";
 import { loadProfile, resolveUser, saveAdaptation, saveCheckin } from "@/lib/persist";
 
 export const runtime = "nodejs";
@@ -147,7 +148,20 @@ export async function POST(req: NextRequest) {
   }
 
   const checkin = parsed.data;
-  const plan = TODAYS_PLAN;
+
+  /**
+   * What today is being adapted from.
+   *
+   * An id, resolved against our own catalogue, never a plan sent by the caller.
+   * The constraints are computed from this plan's minutes and movements, so
+   * accepting one from the request body would let a caller decide what its own
+   * limits were derived from. An id we do not recognise falls back to the
+   * baseline rather than failing: a stale link should still give someone a
+   * session.
+   */
+  const plan = planForWorkoutId(
+    typeof body?.workout_id === "string" ? body.workout_id : null
+  ) ?? TODAYS_PLAN;
 
   /* Quick adjustments the person asked for by tapping a chip. They tighten the
      constraints our own code computes; they never loosen them, and they never
